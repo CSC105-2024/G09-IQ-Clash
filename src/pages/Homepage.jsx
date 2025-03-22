@@ -21,8 +21,8 @@ const Homepage = () => {
       <img src="logo.jpg" alt="Logo" className="rounded-full p-3 w-2/4 max-w-sm shadow-lg border-4 border-white"/>
     </div>
         <div className='flex flex-col gap-4 items-center justify-center w-full h-1/12'>
-          <Link to="/play"><button type="button" className='bg-red-500 text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 sm:text-lg border-2 border-gray-700 hover:bg-red-600 transition-all shadow-md'>Play</button></Link>
-          <Link to="/leaderboard"><button type="button" className='bg-green-500 text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 sm:text-lg border-2 border-gray-700 hover:bg-green-600 transition-all shadow-md'>Leaderboard</button></Link>
+          <Link to="/play"><button type="button" className='bg-red-500 text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 sm:text-lg border-2 border-gray-700 hover:bg-red-600 transition-all shadow-md w-43'>Play</button></Link>
+          <Link to="/leaderboard"><button type="button" className='bg-green-500 text-white font-bold rounded-xl px-6 py-3 sm:px-8 sm:py-4 sm:text-lg border-2 border-gray-700 hover:bg-green-600 transition-all shadow-md w-43'>Leaderboard</button></Link>
         </div>
         <div className='fixed bottom-0 bg-red-800 p-6 w-full shadow-md'></div>
       </div>

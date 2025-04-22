@@ -33,7 +33,15 @@ const router = createBrowserRouter([
   {
     path: "/summary",
     element: <Summary/>
-  },  
+  },
+  {
+    path: "/userpage",
+    element:<UserPage/>
+  },
+  {
+    path: "/doingquiz",
+    element:<DoingQuiz/>
+    }
 ]);
 createRoot(document.getElementById("root")).render(
   <StrictMode>

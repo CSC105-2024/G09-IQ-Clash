@@ -8,6 +8,7 @@ import Register from './pages/Register.jsx';
 import Login from './pages/Login.jsx';
 import ChoosingQuiz from './pages/ChoosingQuiz.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
+import Summary from './pages/Summary.jsx';
 const router = createBrowserRouter([
   {
     path: "/", 
@@ -28,8 +29,11 @@ const router = createBrowserRouter([
   {
     path: "/leaderboard",
     element: <Leaderboard/>
-  }
-
+  },  
+  {
+    path: "/summary",
+    element: <Summary/>
+  },  
 ]);
 createRoot(document.getElementById("root")).render(
   <StrictMode>

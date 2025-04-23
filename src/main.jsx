@@ -27,6 +27,14 @@ const router = createBrowserRouter([
     element: <ChoosingQuiz/>,
   },
   {
+    path: "/play/:topic",
+    element: <ChoosingQuiz2/>,
+  },
+  {
+    path: "/play/:topic/:time/:items",
+    element: <DoingQuiz/>
+  },
+  {
     path: "/leaderboard",
     element: <Leaderboard/>
   },  

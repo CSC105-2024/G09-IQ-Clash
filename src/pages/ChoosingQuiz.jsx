@@ -23,7 +23,7 @@ const ChoosingQuiz = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col items-center bg-red-300 rounded-lg p-4 w-full max-w-[280px] shadow-lg">
             <img
-              src="/quizIcon/mathI.png"
+              src="mathI.png"
               alt="Math"
               className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-52 lg:h-52 object-contain"
             />
@@ -39,7 +39,7 @@ const ChoosingQuiz = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col items-center bg-red-300 rounded-lg p-4 w-full max-w-[280px] shadow-lg">
             <img
-              src="/quizIcon/sportsI.png"
+              src="sportsI.png"
               alt="Sports"
               className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-52 lg:h-52 object-contain"
             />
@@ -55,7 +55,7 @@ const ChoosingQuiz = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col items-center bg-red-300 rounded-lg p-4 w-full max-w-[280px] shadow-lg">
             <img
-              src="/quizIcon/ScienceI.png"
+              src="ScienceI.png"
               alt="Science"
               className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-52 lg:h-52 object-contain"
             />

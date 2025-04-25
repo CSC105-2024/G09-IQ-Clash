@@ -1,166 +1,488 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 
-function DoingQuiz() {
-    const { topic, time, items } = useParams(); // these datas retrieve from the url
-    const initialTimeInSeconds = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const [timeLeft, setTimeLeft] = useState(initialTimeInSeconds);
-    const [showModal, setShowModal] = useState(false);
-    const [showBack, setShowBack] = useState(false);
+// --- Constants ---
+const DEFAULT_QUIZ_TIME_SECONDS = 60;
+const DEFAULT_QUIZ_ITEMS = 10;
 
-    useEffect(() => {
-        if (timeLeft <= 0) return;
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => prev - 1);
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [timeLeft]);
+// --- Data & Helpers (Assume defined elsewhere or imported)Add question here ---
+const questionBank = [
+    {
+        topic: "Science", // Added topic
+        question: "What is the capital of Italy?",
+        image: "path/to/image1.png", // Make sure this path is valid or handle missing images
+        name: "Rome",
+        answers: [
+            { id: 'A', text: 'Madrid', color: 'yellow' },
+            { id: 'B', text: 'Rome', color: 'green' },
+            { id: 'C', text: 'Berlin', color: 'blue' },
+            { id: 'D', text: 'Lisbon', color: 'pink' },
+        ],
+        correct: 'B',
+    },
+    {
+        topic: "Science", // Added topic
+        question: "Which gas do plants absorb?",
+        image: null,
+        name: "Leaves",
+        answers: [
+            { id: 'A', text: 'Oxygen', color: 'blue' },
+            { id: 'B', text: 'Hydrogen', color: 'pink' },
+            { id: 'C', text: 'Carbon Dioxide', color: 'green' },
+            { id: 'D', text: 'Nitrogen', color: 'yellow' },
+        ],
+        correct: 'C',
+    },
+    {
+        topic: "Science",
+        question: "What is the longest river in the world?",
+        image: null,
+        name: "River",
+        answers: [
+            { id: 'A', text: 'Nile', color: 'blue' },
+            { id: 'B', text: 'Amazon', color: 'green' },
+            { id: 'C', text: 'Mississippi', color: 'yellow' },
+            { id: 'D', text: 'Yangtze', color: 'pink' },
+        ],
+        correct: 'A',
+    },
+     {
+        topic: "Science",
+        question: "What is the chemical symbol for Water?",
+        image: null,
+        name: "Water Molecule",
+        answers: [
+            { id: 'A', text: 'O2', color: 'blue' },
+            { id: 'B', text: 'CO2', color: 'pink' },
+            { id: 'C', text: 'H2O', color: 'green' },
+            { id: 'D', text: 'NaCl', color: 'yellow' },
+        ],
+        correct: 'C',
+    },
+];
 
-    useEffect(() => {
-        if (timeLeft === 0) {
-            console.log('Time is up!');
-            setShowModal(true);
-        }
-    }, [timeLeft]);
+function shuffleArray(array) {
+  let currentIndex = array.length, randomIndex
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
 
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    const timeDigits = [
-        String(minutes).padStart(2, '0')[0],
-        String(minutes).padStart(2, '0')[1],
-        String(seconds).padStart(2, '0')[0],
-        String(seconds).padStart(2, '0')[1],
-    ];
+// --- Modal Components ---
 
-    const score = 100;
-    const questionNumber = 1;
-    const questionText = "What is this?";
-    const imageSrc = "path/to/your/bull-image.png";
-    const imageName = "Brown bull";
-    const answers = [
-        { id: 'A', text: 'Answer A', color: 'yellow' },
-        { id: 'B', text: 'Answer B', color: 'blue' },
-        { id: 'C', text: 'Answer C', color: 'pink' },
-        { id: 'D', text: 'Answer D', color: 'green' },
-    ];
+function QuizOverModal({ isOpen, timeLeft, finalScore, totalQuestions, error, onContinue }) {
+    if (!isOpen) return null;
 
-    const getButtonClasses = (color) => {
-        const baseClasses = `w-full text-left font-bold py-3 px-5 rounded-lg shadow mb-3 md:w-auto md:mb-0`;
-        switch (color) {
-            case 'yellow': return `${baseClasses} bg-yellow-500 hover:bg-yellow-600 text-black`;
-            case 'blue': return `${baseClasses} bg-blue-500 hover:bg-blue-600 text-white`;
-            case 'pink': return `${baseClasses} bg-pink-500 hover:bg-pink-600 text-white`;
-            case 'green': return `${baseClasses} bg-green-500 hover:bg-green-600 text-white`;
-            default: return `${baseClasses} bg-gray-500 hover:bg-gray-600 text-white`;
-        }
-    };
+    const titleId = "quizOverModalTitle";
+    const descriptionId = "quizOverModalDesc";
+    let title = "";
+    let description = "";
 
-    const handleAnswerClick = (answerId) => {
-        console.log(`Answer ${answerId} clicked`);
-    };
-
-    const handleBackClick = () => {
-        setShowBack(true);
-    };
+    if (error) {
+        title = "⚠️ Quiz Error";
+        description = error;
+    } else if (timeLeft <= 0) {
+        title = "⏰ Time is up!!!";
+        description = `Your final score: ${finalScore} / ${totalQuestions}`;
+    } else {
+        title = "🎉 Quiz Complete!";
+        description = `Your final score: ${finalScore} / ${totalQuestions}`;
+    }
 
     return (
-        <div className="bg-gray-300 min-h-screen flex items-center justify-center p-4">
-            <div className="bg-gray-100 p-4 rounded-lg shadow-xl w-full max-w-3xl md:p-6 lg:p-8">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}>
+            <div className="bg-white p-6 rounded-xl shadow-lg text-center w-full max-w-sm sm:max-w-md">
+                <h2 id={titleId} className="text-2xl font-bold mb-2">{title}</h2>
+                <p id={descriptionId} className="text-xl mb-6">{description}</p>
+                <button
+                    onClick={onContinue}
+                    className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"
+                >
+                    Continue
+                </button>
+            </div>
+        </div>
+    );
+}
 
-                <div className="md:hidden mb-4">
-                    <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">
-                        Back
+function CancelModal({ isOpen, onConfirm, onCancel }) {
+    if (!isOpen) return null;
+    const titleId = "cancelModalTitle";
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+            <div className="bg-white p-6 rounded-xl shadow-lg text-center w-full max-w-sm sm:max-w-md">
+                <h2 id={titleId} className="text-xl sm:text-2xl font-bold mb-6">Do you want to cancel the quiz?</h2>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <button onClick={onCancel} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
+                        No, Continue Quiz
+                    </button>
+                    <button onClick={onConfirm} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700 transition w-full sm:w-auto">
+                        Yes, Cancel
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+}
 
-                <div className="text-center md:hidden mb-6">
-                    <div className="bg-orange-500 text-white px-8 py-2 rounded-full shadow-md inline-block">
-                        <span className="block text-xs font-medium leading-tight">SCORE</span>
-                        <span className="block text-2xl font-bold leading-tight">{score}</span>
-                    </div>
-                </div>
+function FeedbackModal({ feedback, isOpen, onContinue, isLastQuestion }) {
+    if (!isOpen || !feedback) return null;
+    const titleId = "feedbackModalTitle";
+    const descriptionId = "feedbackModalDesc";
 
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}>
+            <div className={`p-6 rounded-xl shadow-lg text-center w-full max-w-sm sm:max-w-md ${feedback.isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
+                <h2 id={titleId} className="text-2xl font-bold mb-3">
+                    {feedback.isCorrect ? "✅ Correct!" : "❌ Incorrect"}
+                </h2>
+                {!feedback.isCorrect && (
+                   <p id={descriptionId} className="mb-4 text-gray-700">The correct answer was: <span className="font-semibold">{feedback.correctAnswerText}</span></p>
+                )}
+                 {feedback.isCorrect && <p id={descriptionId}></p>}
+               <button onClick={onContinue} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
+                    {isLastQuestion ? "Finish Quiz" : "Next Question"}
+               </button>
+           </div>
+       </div>
+   );
+}
+
+
+// --- Main Quiz Gameplay Component ---
+
+function DoingQuiz() {
+    const { topic, time, items } = useParams();
+    const navigate = useNavigate();
+
+    // --- State Initialization ---
+    const totalItems = useMemo(() => parseInt(items) || DEFAULT_QUIZ_ITEMS, [items]);
+    const initialTimeInSeconds = useMemo(() => {
+        const parts = time?.split(':');
+        if (parts?.length === 2) {
+            const minutes = parseInt(parts[0]);
+            const seconds = parseInt(parts[1]);
+            if (!isNaN(minutes) && !isNaN(seconds)) {
+                return Math.max(0, minutes * 60 + seconds);
+            }
+        }
+        return DEFAULT_QUIZ_TIME_SECONDS;
+    }, [time]);
+
+    const [quizQuestions, setQuizQuestions] = useState([]);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(initialTimeInSeconds);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isAnswerSelected, setIsAnswerSelected] = useState(false);
+    const [answerFeedback, setAnswerFeedback] = useState(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [quizOver, setQuizOver] = useState(false);
+    const [quizError, setQuizError] = useState(null);
+    const [finalScore, setFinalScore] = useState(0);
+
+    // --- Effects ---
+    useEffect(() => {
+        setIsLoading(true);
+        setQuizError(null);
+        setQuizQuestions([]);
+        setCurrentQuestionIndex(0);
+        setScore(0);
+        setTimeLeft(initialTimeInSeconds);
+        setQuizOver(false);
+        setIsAnswerSelected(false);
+        setAnswerFeedback(null);
+        setShowCancelModal(false);
+
+        const filteredQuestions = questionBank.filter(
+            q => q.topic.toLowerCase() === topic?.toLowerCase()
+        );
+
+        if (filteredQuestions.length === 0) {
+             setQuizError(`No questions found for the topic "${topic}".`);
+             setQuizOver(true);
+             setIsLoading(false);
+             return;
+        }
+
+        const selectedQuestions = shuffleArray([...filteredQuestions]).slice(0, totalItems);
+
+         if (selectedQuestions.length === 0 && totalItems > 0) {
+             setQuizError(`Could not select any questions. Invalid number requested? (${items})`);
+             setQuizOver(true);
+             setIsLoading(false);
+             return;
+         }
+         if (selectedQuestions.length < totalItems) {
+             console.warn(`Requested ${totalItems} items for topic "${topic}", but only ${selectedQuestions.length} were available.`);
+         }
+
+        setQuizQuestions(selectedQuestions);
+        setIsLoading(false);
+
+    }, [topic, items, totalItems, initialTimeInSeconds]);
+
+    useEffect(() => {
+        if (isLoading || quizOver || timeLeft <= 0) {
+            if (timeLeft <= 0 && !quizOver && !isLoading) {
+                 setFinalScore(score);
+                 setQuizOver(true);
+            }
+            return;
+        }
+
+        const timerId = setInterval(() => {
+            setTimeLeft((prevTime) => prevTime - 1);
+        }, 1000);
+
+        return () => clearInterval(timerId);
+
+    }, [timeLeft, isLoading, quizOver, score]);
+
+
+    // --- Derived State & Formatting ---
+    const currentQuestion = useMemo(() => {
+        if (isLoading || quizQuestions.length === 0 || currentQuestionIndex >= quizQuestions.length) {
+            return null;
+        }
+        return quizQuestions[currentQuestionIndex];
+    }, [isLoading, quizQuestions, currentQuestionIndex]);
+
+    const timeDigits = useMemo(() => {
+        const minutes = Math.max(0, Math.floor(timeLeft / 60));
+        const seconds = Math.max(0, timeLeft % 60);
+        return [
+            String(minutes).padStart(2, '0')[0],
+            String(minutes).padStart(2, '0')[1],
+
+            String(seconds).padStart(2, '0')[0],
+            String(seconds).padStart(2, '0')[1],
+        ];
+    }, [timeLeft]);
+
+    // --- Event Handlers ---
+    const handleAnswerClick = useCallback((selectedAnswerId) => {
+        if (!currentQuestion || isAnswerSelected || quizOver) return;
+
+        const isCorrect = selectedAnswerId === currentQuestion.correct;
+        if (isCorrect) {
+            setScore(prevScore => prevScore + 1);
+        }
+
+        setAnswerFeedback({
+            isCorrect,
+            correctAnswerText: currentQuestion.answers.find(a => a.id === currentQuestion.correct)?.text || 'N/A',
+            selectedAnswerId: selectedAnswerId
+        });
+        setIsAnswerSelected(true);
+
+    }, [currentQuestion, isAnswerSelected, quizOver]);
+
+    const handleContinueAfterFeedback = useCallback(() => {
+        setIsAnswerSelected(false);
+        setAnswerFeedback(null);
+
+        const nextQuestionIndex = currentQuestionIndex + 1;
+        if (nextQuestionIndex < quizQuestions.length) {
+            setCurrentQuestionIndex(nextQuestionIndex);
+        } else {
+            setFinalScore(score);
+            setQuizOver(true);
+        }
+    }, [currentQuestionIndex, quizQuestions.length, score]);
+
+    const handleBackClick = useCallback(() => {
+        setShowCancelModal(true);
+    }, []);
+
+    const handleCancelConfirm = useCallback(() => {
+        setShowCancelModal(false);
+        navigate("/");
+    }, [navigate]);
+
+    const handleCancelDismiss = useCallback(() => {
+         setShowCancelModal(false);
+     }, []);
+
+    const handleQuizEndContinue = useCallback(() => {
+        navigate("summary");
+    }, [navigate]);
+
+    const handleImageError = useCallback((event) => {
+        console.warn("Image failed to load:", event.target.src);
+        event.target.style.display = 'none';
+    }, []);
+
+
+    // --- Button Styling Logic ---
+    const getButtonProps = useCallback((answer) => {
+        const baseClasses = `w-full text-left font-bold py-3 px-5 rounded-lg shadow mb-3 md:w-auto md:mb-0 transition-all duration-150 ease-in-out`;
+        const colorClasses = {
+            'yellow': 'bg-yellow-500 hover:bg-yellow-600 text-black',
+            'blue': 'bg-blue-500 hover:bg-blue-600 text-white',
+            'pink': 'bg-pink-500 hover:bg-pink-600 text-white',
+            'green': 'bg-green-500 hover:bg-green-600 text-white',
+            'default': 'bg-gray-500 hover:bg-gray-600 text-white'
+        };
+
+        let style = `${baseClasses} ${colorClasses[answer.color] || colorClasses['default']}`;
+        let isDisabled = false;
+
+        if (answerFeedback && isAnswerSelected) {
+            isDisabled = true;
+            if (answer.id === currentQuestion?.correct) {
+                style += ' ring-4 ring-offset-2 ring-green-400 scale-105';
+            }
+            else if (answer.id === answerFeedback.selectedAnswerId) {
+                 style += ' ring-4 ring-offset-2 ring-red-400 opacity-70';
+            }
+            else {
+                 style += ' opacity-50';
+            }
+        }
+        else if (isAnswerSelected && !answerFeedback) {
+             isDisabled = true;
+             style += ' opacity-50 cursor-not-allowed';
+        }
+
+        return { className: style, disabled: isDisabled };
+    }, [answerFeedback, isAnswerSelected, currentQuestion]);
+
+
+    // --- Render Logic ---
+    if (isLoading) {
+        return (
+            <div className="bg-gray-300 min-h-screen flex items-center justify-center">
+                <p className="text-xl font-semibold">Loading Quiz...</p>
+            </div>
+        );
+    }
+
+     if (quizOver) {
+         return (
+             <QuizOverModal
+                 isOpen={true}
+                 timeLeft={timeLeft}
+                 finalScore={finalScore}
+                 totalQuestions={quizQuestions.length > 0 ? quizQuestions.length : totalItems}
+                 error={quizError}
+                 onContinue={handleQuizEndContinue}
+             />
+         );
+     }
+
+    return (
+        <div className="bg-gray-300 min-h-screen flex items-center justify-center p-4 font-sans">
+            <div className="bg-gray-100 p-4 rounded-lg shadow-xl w-full max-w-3xl md:p-6 lg:p-8 relative">
+
+                 {/* Mobile Header */}
+                 <div className="md:hidden flex justify-between items-center mb-4">
+                     <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">
+                         Back
+                     </button>
+                      <div className="text-center" aria-live="polite">
+                          <div className="bg-orange-500 text-white px-4 py-1 rounded-full shadow-md inline-block">
+                              <span className="block text-xs font-medium leading-tight tracking-wider">SCORE</span>
+                              <span className="block text-xl font-bold leading-tight">{score}</span>
+                          </div>
+                      </div>
+                       <div className="text-sm font-semibold text-gray-600 w-16 text-right tabular-nums">
+                          {currentQuestionIndex + 1}/{quizQuestions.length}
+                       </div>
+                 </div>
+
+                {/* Desktop Header */}
                 <header className="hidden md:flex justify-between items-center mb-8 relative">
                     <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-1.5 rounded shadow">
                         Back
                     </button>
-                    <div className="text-center flex-grow">
-                        <h1 className="text-3xl lg:text-4xl font-bold text-gray-800">TIME!</h1>
-                        <div className="flex justify-center space-x-1 lg:space-x-2 mt-2">
-                            {timeDigits.map((digit, index) => (
-                                <span key={index} className="bg-black text-white text-2xl font-mono p-2 rounded-md">
-                                    {digit}
-                                </span>
-                            ))}
-                        </div>
+                    <div className="text-center flex-grow mx-4">
+                         <div className="text-sm font-semibold text-gray-600 mb-1 tabular-nums" aria-hidden="true">
+                             Question {currentQuestionIndex + 1} of {quizQuestions.length}
+                         </div>
+                        <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 uppercase tracking-wider">Time</h1>
+                        <div className="flex justify-center items-center space-x-1 lg:space-x-1.5 mt-2" aria-live="off">
+                             <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[0]}</span>
+                             <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[1]}</span>
+                             <span className="text-2xl font-mono text-black mx-0.5 pb-1">:</span> 
+                             <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[2]}</span>
+                             <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[3]}</span>
+                         </div>
                     </div>
-                    <div className="bg-orange-500 text-white px-3 py-1 rounded shadow text-center">
-                        <span className="block text-xs font-medium">SCORE</span>
-                        <span className="block text-xl font-bold">{score}</span>
-                    </div>
+                     <div className="bg-orange-500 text-white px-3 py-1 rounded shadow text-center" aria-live="polite">
+                         <span className="block text-xs font-medium uppercase tracking-wider">Score</span>
+                         <span className="block text-xl font-bold">{score}</span>
+                     </div>
                 </header>
 
+                {/* Question Area */}
                 <main className="text-center mb-6 md:mb-8">
-                    <p className="hidden md:block text-gray-700 mb-4 text-lg">
-                        {questionNumber}. {questionText}
-                    </p>
-                    <div className="bg-white inline-block p-4 rounded-2xl shadow-lg w-4/5 max-w-[250px] md:max-w-none md:w-auto md:rounded-lg md:border md:border-gray-300 md:shadow-md md:p-6">
-                        <img
-                            src={imageSrc}
-                            alt={`Quiz image - ${imageName}`}
-                            className="h-32 md:h-40 w-auto mx-auto object-contain"
-                        />
-                    </div>
-                </main>
+                     <p className="text-gray-800 mb-4 text-lg lg:text-xl font-medium px-2 leading-relaxed">
+                         <span className="sr-only">Question {currentQuestionIndex + 1} of {quizQuestions.length}:</span>
+                         {currentQuestion?.question}
+                     </p>
 
-                <div className="flex justify-center items-center space-x-1 mb-8 md:hidden">
-                    {timeDigits.map((digit, index) => (
-                        <span key={index} className="bg-black text-white text-2xl font-mono p-2 rounded-md">
-                            {digit}
-                        </span>
-                    ))}
-                </div>
+                    {currentQuestion?.image && (
+                        <div className="bg-white inline-block p-4 rounded-lg shadow-md w-4/5 max-w-[250px] md:max-w-xs md:rounded-lg md:border md:border-gray-300 md:p-6 my-4">
+                            <img
+                                src={currentQuestion.image}
+                                alt={currentQuestion.name || `Quiz visual aid`}
+                                className="h-32 md:h-40 w-auto mx-auto object-contain"
+                                onError={handleImageError}
+                            />
+                        </div>
+                    )}
+                 </main>
 
-                <section className="w-full max-w-sm mx-auto px-4 md:px-0 md:max-w-none md:bg-black md:p-6 md:rounded-lg md:shadow-inner">
+                 {/* Mobile Timer Display */}
+                 <div className="flex justify-center items-center space-x-1 mb-8 md:hidden" aria-live="off">
+                       <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[0]}</span>
+                       <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[1]}</span>
+                       <span className="text-2xl font-mono text-black mx-0.5 pb-1">:</span>
+                       <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[2]}</span>
+                       <span className="bg-black text-white text-2xl font-mono p-2 rounded-md shadow">{timeDigits[3]}</span>
+                  </div>
+                
+                {/* Answer Buttons Section */}
+                <section className="w-full max-w-sm mx-auto px-4 md:px-0 md:max-w-none md:bg-gradient-to-b from-gray-800 to-black md:p-6 md:rounded-lg md:shadow-inner">
+                     <h2 className="sr-only">Choose an answer:</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                        {answers.map((answer) => (
-                            <button
-                                key={answer.id}
-                                onClick={() => handleAnswerClick(answer.id)}
-                                className={getButtonClasses(answer.color)}>
-                                {answer.id}. {answer.text}
-                            </button>
-                        ))}
+                        {currentQuestion?.answers.map((answer) => {
+                            const buttonProps = getButtonProps(answer);
+                            return (
+                                <button
+                                    key={answer.id}
+                                    onClick={() => handleAnswerClick(answer.id)}
+                                    disabled={buttonProps.disabled}
+                                    className={buttonProps.className}
+                                >
+                                    <span className="font-bold mr-2">{answer.id}.</span> {answer.text}
+                                </button>
+                            );
+                        })}
                     </div>
                 </section>
+
+                 <div className="h-4"></div>
             </div>
 
-            {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-                    <div className="bg-white p-6 rounded-xl shadow-lg text-center w-full max-w-sm sm:max-w-md">
-                        <h2 className="text-2xl font-bold mb-4">⏰ Time is up!!!</h2>
-                        <button onClick={() => window.location.href = "/"} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
-                            Continue
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+             <CancelModal
+                 isOpen={showCancelModal}
+                 onConfirm={handleCancelConfirm}
+                 onCancel={handleCancelDismiss}
+             />
 
-            {showBack && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-                    <div className="bg-white p-6 rounded-xl shadow-lg text-center w-full max-w-sm sm:max-w-md">
-                        <h2 className="text-2xl font-bold mb-6">Do you want to cancel the quiz?</h2>
-                        <div className="flex flex-col sm:flex-row justify-center gap-3">
-                            <button onClick={() => setShowBack(false)} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto">
-                                No
-                            </button>
-                            <button onClick={() => window.location.href = "/"} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700 transition w-full sm:w-auto">
-                                Yes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+             <FeedbackModal
+                 isOpen={!!answerFeedback}
+                 feedback={answerFeedback}
+                 onContinue={handleContinueAfterFeedback}
+                 isLastQuestion={currentQuestionIndex >= quizQuestions.length - 1}
+             />;
         </div>
     );
 }

@@ -29,8 +29,8 @@ const ChoosingQuiz = () => {
             />
           </div>
           <Link to="/play/mathematics">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded-md w-full font-medium">
-              Mathematics
+            <button className="bg-gray-300 text-black px-4 py-2 rounded-md w-full font-semibold border-2">
+              Mathematics 
             </button>
           </Link>
         </div>
@@ -45,7 +45,7 @@ const ChoosingQuiz = () => {
             />
           </div>
           <Link to="/play/sports">
-            <button className="bg-purple-500 text-black px-4 py-2 rounded-md w-full font-medium">
+            <button className="bg-purple-500 text-black px-4 py-2 rounded-md w-full font-semibold border-2">
               Sports
             </button>
           </Link>
@@ -61,7 +61,7 @@ const ChoosingQuiz = () => {
             />
           </div>
           <Link to="/play/science">
-            <button className="bg-yellow-200 text-black px-4 py-2 rounded-md w-full font-medium">
+            <button className="bg-yellow-200 text-black px-4 py-2 rounded-md w-full font-semibold border-2">
               Science
             </button>
           </Link>

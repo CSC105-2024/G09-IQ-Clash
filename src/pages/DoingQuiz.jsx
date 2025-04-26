@@ -334,7 +334,7 @@ function DoingQuiz() {
                 {/* --- Answer Buttons Section --- */}
                 <section className="w-full max-w-sm mx-auto px-4 md:px-0 md:max-w-none md:bg-gradient-to-b from-gray-800 to-black md:p-6 md:rounded-lg md:shadow-inner">
                      <h2 className="sr-only">Choose an answer:</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 p-2 gap-3 md:gap-4">
                         {currentQuestion?.answers.map((answer) => {
                             const buttonProps = getButtonProps(answer);
                             return (

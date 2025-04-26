@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-// --- Constants ---
-const DEFAULT_QUIZ_TIME_SECONDS = 60;
-const DEFAULT_QUIZ_ITEMS = 10;
-
 // --- Data & Helpers (Assume defined elsewhere or imported) ---
 const questionBank = [
     // ... (keep your questionBank as is)

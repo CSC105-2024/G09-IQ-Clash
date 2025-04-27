@@ -7,12 +7,13 @@ function Summary() {
   const navigate = useNavigate();
 
   // --- Extract data from location state ---
-  const { score = 0, total = 0 } = location.state || {};
+  const { score = 0, total = 0,wrong =0  } = location.state || {};
 
   // --- Calculate derived values ---
   const totalQuestions = total;
-  const wrongAnswers = totalQuestions - score;
-  const unanswered = 0;
+  const wrongAnswers = wrong;
+  const TotalScore   = 0;
+  const correctAnswer = total-wrong;
   const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   // --- Determine dynamic messages ---
@@ -80,7 +81,7 @@ function Summary() {
                 <FaCheck className="text-green-500 w-5 h-5 lg:w-6 lg:h-6" />
                 <span className="text-gray-700 dark:text-gray-200 lg:text-lg">Correct answers</span>
               </div>
-              <span className="font-medium text-gray-800 dark:text-gray-100 lg:text-lg">{score}/{totalQuestions}</span>
+              <span className="font-medium text-gray-800 dark:text-gray-100 lg:text-lg">{correctAnswer}/{totalQuestions}</span>
             </div>
 
             {/* Wrong Answers - Using FaTimes */}
@@ -93,14 +94,14 @@ function Summary() {
               <span className="font-medium text-gray-800 dark:text-gray-100 lg:text-lg">{wrongAnswers}/{totalQuestions}</span>
             </div>
 
-            {/* Unanswered - Using FaQuestionCircle */}
+            {/* TotalScore - Using FaQuestionCircle */}
             <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-200 dark:bg-gray-600 rounded-lg">
               <div className="flex items-center space-x-2 lg:space-x-3">
                 <FaQuestionCircle className="text-gray-600 dark:text-gray-400 w-5 h-5 lg:w-6 lg:h-6" />
-                <span className="text-gray-700 dark:text-gray-200 lg:text-lg">Unanswered</span>
+                <span className="text-gray-700 dark:text-gray-200 lg:text-lg">TotalScore</span>
               </div>
-               {/* Display dynamic unanswered count */}
-              <span className="font-medium text-gray-800 dark:text-gray-100 lg:text-lg">{unanswered}/{totalQuestions}</span>
+               {/* Display dynamic TotalScore */}
+              <span className="font-medium text-gray-800 dark:text-gray-100 lg:text-lg">{TotalScore}</span>
             </div>
           </div>
           {/* Continue Button */}

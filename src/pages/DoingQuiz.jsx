@@ -193,6 +193,7 @@ function DoingQuiz() {
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [correct, setcorrect] = useState(0);
   const [wrongQ, setwrong] = useState(0);
   const [timeLeft, setTimeLeft] = useState(initialTimeInSeconds);
   const [finalScore, setFinalScore] = useState(0);
@@ -208,6 +209,7 @@ function DoingQuiz() {
     setCurrentQuestionIndex(0);
     setScore(0);
     setwrong(0);
+    setcorrect(0);
     setTimeLeft(initialTimeInSeconds);
     setFinalScore(0);
     setFinalUnanswered(0);
@@ -269,6 +271,7 @@ function DoingQuiz() {
     if (!currentQuestion || isAnswerSelected || quizStatus !== 'running') return;
     const isCorrect = selectedAnswerId === currentQuestion.correct;
     if (isCorrect) {
+        setcorrect(prevCorrect => prevCorrect+1);
       setScore(prevScore => prevScore + 1);
     } else {
       setwrong(prevWrong => prevWrong + 1);
@@ -306,6 +309,7 @@ function DoingQuiz() {
     navigate("summary", {
       state: {
         score: finalScore,
+        correct1: correct,
         wrong: wrongQ,
         total: totalQs,
         unanswered: finalUnanswered

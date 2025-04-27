@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 // --- Data & Helpers (Assume defined elsewhere or imported) ---
 const questionBank = [
-    // ... (keep your questionBank as is)
- { topic: "Sports", question: "How many players are on a standard soccer (football) team on the field at one time?", image: null, name: "Soccer Team Size", answers: [ { id: 'A', text: '9', color: 'blue' }, { id: 'B', text: '10', color: 'pink' }, { id: 'C', text: '11', color: 'green' }, { id: 'D', text: '12', color: 'yellow' } ], correct: 'C' },
+  // --- Sports Questions (30) ---
+  { topic: "Sports", question: "How many players are on a standard soccer (football) team on the field at one time?", image: null, name: "Soccer Team Size", answers: [ { id: 'A', text: '9', color: 'blue' }, { id: 'B', text: '10', color: 'pink' }, { id: 'C', text: '11', color: 'green' }, { id: 'D', text: '12', color: 'yellow' } ], correct: 'C' },
   { topic: "Sports", question: "In which sport would you perform an 'alley-oop'?", image: null, name: "Basketball Maneuver", answers: [ { id: 'A', text: 'Volleyball', color: 'blue' }, { id: 'B', text: 'Basketball', color: 'pink' }, { id: 'C', text: 'Tennis', color: 'green' }, { id: 'D', text: 'Ice Hockey', color: 'yellow' } ], correct: 'B' },
   { topic: "Sports", question: "How many rounds are there in a standard professional boxing match?", image: null, name: "Boxing Rounds", answers: [ { id: 'A', text: '10', color: 'blue' }, { id: 'B', text: '15', color: 'pink' }, { id: 'C', text: '12', color: 'green' }, { id: 'D', text: '8', color: 'yellow' } ], correct: 'C' },
   { topic: "Sports", question: "Which country hosted the 2016 Summer Olympics?", image: null, name: "2016 Olympics Host", answers: [ { id: 'A', text: 'China', color: 'blue' }, { id: 'B', text: 'Brazil', color: 'pink' }, { id: 'C', text: 'United Kingdom', color: 'green' }, { id: 'D', text: 'Japan', color: 'yellow' } ], correct: 'B' },
@@ -144,44 +144,33 @@ function TimerDisplay({ timeDigits }) {
 
 // --- Main Quiz Gameplay Component (Updated) ---
 function DoingQuiz() {
-    const { topic, time, items } = useParams();
+    // --- State Variables ---
+    const { topic = 'default', items = '10' } = useParams();
     const navigate = useNavigate();
+    const totalItems = parseInt(items, 10) || 10;
+    const initialTimeInSeconds = 120;
 
-    // --- State Initialization ---
-    const totalItems = useMemo(() => parseInt(items) || DEFAULT_QUIZ_ITEMS, [items]);
-    const initialTimeInSeconds = useMemo(() => {
-        const parts = time?.split(':');
-        if (parts?.length === 2) {
-            const minutes = parseInt(parts[0]);
-            const seconds = parseInt(parts[1]);
-            if (!isNaN(minutes) && !isNaN(seconds)) {
-                return Math.max(0, minutes * 60 + seconds);
-            }
-        }
-        return DEFAULT_QUIZ_TIME_SECONDS;
-    }, [time]);
-
+    const [quizStatus, setQuizStatus] = useState('loading');
+    const [quizError, setQuizError] = useState(null);
     const [quizQuestions, setQuizQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
+    const [wrongQ, setwrong] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimeInSeconds);
     const [finalScore, setFinalScore] = useState(0);
-    const [finalUnanswered, setFinalUnanswered] = useState(0); 
-    const [quizStatus, setQuizStatus] = useState('loading'); 
-    const [quizError, setQuizError] = useState(null);
+    const [finalUnanswered, setFinalUnanswered] = useState(0);
     const [isAnswerSelected, setIsAnswerSelected] = useState(false);
     const [answerFeedback, setAnswerFeedback] = useState(null);
     const [showCancelModal, setShowCancelModal] = useState(false);
 
-    // --- Effects ---
-    // Initialize/Reset Quiz Effect
+    // --- Effect: Initialize or Reset Quiz ---
     useEffect(() => {
-        // Reset all state variables
         setQuizStatus('loading');
         setQuizError(null);
         setQuizQuestions([]);
         setCurrentQuestionIndex(0);
         setScore(0);
+        setwrong(0);
         setTimeLeft(initialTimeInSeconds);
         setFinalScore(0);
         setFinalUnanswered(0);
@@ -189,49 +178,46 @@ function DoingQuiz() {
         setAnswerFeedback(null);
         setShowCancelModal(false);
 
-        // Filter and select questions (logic unchanged)
         const filteredQuestions = questionBank.filter(
             q => q.topic.toLowerCase() === topic?.toLowerCase()
         );
         if (filteredQuestions.length === 0) {
-             setQuizError(`No questions found for the topic "${topic}".`);
-             setQuizStatus('error');
-             return;
+            setQuizError(`No questions found for the topic "${topic}".`);
+            setQuizStatus('error');
+            return;
         }
+
         const selectedQuestions = shuffleArray([...filteredQuestions]).slice(0, totalItems);
-         if (selectedQuestions.length === 0 && totalItems > 0) {
-             setQuizError(`Could not select any questions. Invalid number requested? (${items})`);
-             setQuizStatus('error');
-             return;
-         }
-         if (selectedQuestions.length < totalItems) {
-             console.warn(`Requested ${totalItems} items for topic "${topic}", but only ${selectedQuestions.length} were available.`);
-         }
+        if (selectedQuestions.length === 0 && totalItems > 0) {
+            setQuizError(`Could not select any questions for topic "${topic}".`);
+            setQuizStatus('error');
+            return;
+        }
+        if (selectedQuestions.length < totalItems) {
+            console.warn(`Requested ${totalItems} items for topic "${topic}", but only ${selectedQuestions.length} were available.`);
+        }
         setQuizQuestions(selectedQuestions);
         setQuizStatus('running');
+    }, [topic, totalItems, initialTimeInSeconds]);
 
-    }, [topic, items, totalItems, initialTimeInSeconds]);
-
-
-    // Timer Effect
+    // --- Effect: Timer ---
     useEffect(() => {
         if (quizStatus !== 'running' || timeLeft <= 0) {
             if (timeLeft <= 0 && quizStatus === 'running') {
-                 setFinalScore(score);
-                 const unansweredCount = quizQuestions.length - currentQuestionIndex;
-                 setFinalUnanswered(unansweredCount);
-                 setQuizStatus('finished');
+                setFinalScore(score);
+                const unansweredCount = quizQuestions.length - currentQuestionIndex;
+                setFinalUnanswered(unansweredCount);
+                setQuizStatus('finished');
             }
             return;
         }
 
-        // Run the timer interval
         const timerId = setInterval(() => {
-            setTimeLeft((prevTime) => Math.max(0, prevTime - 1)); // Ensure time doesn't go below 0
+            setTimeLeft((prevTime) => Math.max(0, prevTime - 1));
         }, 1000);
+
         return () => clearInterval(timerId);
     }, [timeLeft, quizStatus, score, quizQuestions, currentQuestionIndex]);
-
 
     // --- Derived State & Formatting ---
     const currentQuestion = useMemo(() => {
@@ -257,10 +243,14 @@ function DoingQuiz() {
         if (!currentQuestion || isAnswerSelected || quizStatus !== 'running') return;
 
         const isCorrect = selectedAnswerId === currentQuestion.correct;
-        let currentScore = score;
+
         if (isCorrect) {
-            currentScore = score + 1;
-            setScore(currentScore);
+            setScore(prevScore => prevScore + 1);
+        } else {
+            setwrong(prevWrong => prevWrong + 1);
+            if (score > 0) {
+                setScore(prevScore => prevScore - 1);
+            }
         }
 
         setAnswerFeedback({
@@ -269,8 +259,7 @@ function DoingQuiz() {
             selectedAnswerId: selectedAnswerId
         });
         setIsAnswerSelected(true);
-
-    }, [currentQuestion, isAnswerSelected, quizStatus, score]);
+    }, [currentQuestion, isAnswerSelected, quizStatus, score, wrongQ]);
 
     const handleContinueAfterFeedback = useCallback(() => {
         setIsAnswerSelected(false);
@@ -278,7 +267,7 @@ function DoingQuiz() {
 
         const nextQuestionIndex = currentQuestionIndex + 1;
         if (nextQuestionIndex < quizQuestions.length) {
-            setCurrentQuestionIndex(nextQuestionIndex); // Go to next question
+            setCurrentQuestionIndex(nextQuestionIndex);
         } else {
             setFinalScore(score);
             setFinalUnanswered(0);
@@ -295,19 +284,19 @@ function DoingQuiz() {
         navigate("summary", {
             state: {
                 score: finalScore,
+                wrong: wrongQ,
                 total: totalQs,
                 unanswered: finalUnanswered
             }
         });
-    // Add finalUnanswered to dependencies
-    }, [navigate, finalScore, quizQuestions, totalItems, finalUnanswered]);
+    }, [navigate, finalScore, wrongQ, quizQuestions, totalItems, finalUnanswered]);
 
     const handleImageError = useCallback((event) => {
         console.warn("Image failed to load:", event.target.src);
-        event.target.style.display = 'none'; // Hide broken image placeholder
+        event.target.style.display = 'none';
     }, []);
 
-    // --- Button Styling Logic (Unchanged - kept for completeness) ---
+    // --- Button Styling Logic ---
     const getButtonProps = useCallback((answer) => {
         const baseClasses = `w-full text-left font-bold py-3 px-5 rounded-lg shadow mb-3 md:w-auto md:mb-0 transition-all duration-150 ease-in-out`;
         const colorClasses = {
@@ -319,22 +308,22 @@ function DoingQuiz() {
         };
         let style = `${baseClasses} ${colorClasses[answer.color] || colorClasses['default']}`;
         let isDisabled = false;
+
         if (answerFeedback && isAnswerSelected) {
             isDisabled = true;
             if (answer.id === currentQuestion?.correct) {
                 style += ' ring-4 ring-offset-2 ring-green-400 scale-105';
             } else if (answer.id === answerFeedback.selectedAnswerId) {
-                 style += ' ring-4 ring-offset-2 ring-red-400 opacity-70';
+                style += ' ring-4 ring-offset-2 ring-red-400 opacity-70';
             } else {
-                 style += ' opacity-50';
+                style += ' opacity-50';
             }
         } else if (isAnswerSelected && !answerFeedback) {
-             isDisabled = true;
-             style += ' opacity-50 cursor-not-allowed';
+            isDisabled = true;
+            style += ' opacity-50 cursor-not-allowed';
         }
         return { className: style, disabled: isDisabled };
     }, [answerFeedback, isAnswerSelected, currentQuestion]);
-
 
     // --- Render Logic ---
     if (quizStatus === 'loading') {
@@ -345,64 +334,60 @@ function DoingQuiz() {
         );
     }
 
-     if (isQuizOver) {
-         return (
-             <QuizOverModal
-                 isOpen={true}
-                 timeLeft={timeLeft}
-                 finalScore={finalScore}
-                 totalQuestions={quizQuestions.length > 0 ? quizQuestions.length : totalItems}
-                 error={quizError}
-                 onContinue={handleQuizEndContinue}
-             />
-         );
-     }
+    if (isQuizOver) {
+        return (
+            <QuizOverModal
+                isOpen={true}
+                timeLeft={timeLeft}
+                finalScore={finalScore}
+                totalQuestions={quizQuestions.length > 0 ? quizQuestions.length : totalItems}
+                error={quizError}
+                onContinue={handleQuizEndContinue}
+            />
+        );
+    }
+
     return (
         <div className="bg-gray-300 min-h-screen flex items-center justify-center p-4 font-sans bg-bgimg">
             <div className="bg-gray-100 p-4 rounded-lg shadow-xl w-full max-w-3xl md:p-6 lg:p-8 relative">
+                {/* Mobile Header */}
+                <div className="md:hidden flex justify-between items-center mb-4">
+                    <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">Back</button>
+                    <div className="text-center" aria-live="polite">
+                        <div className="bg-orange-500 text-white px-4 py-1 rounded-full shadow-md inline-block">
+                            <span className="block text-xs font-medium leading-tight tracking-wider">SCORE</span>
+                            <span className="block text-xl font-bold leading-tight">{score}</span>
+                        </div>
+                    </div>
+                    <div className="text-sm font-semibold text-gray-600 w-16 text-right tabular-nums">
+                        {currentQuestionIndex + 1}/{quizQuestions.length}
+                    </div>
+                </div>
 
-                 {/* --- Mobile Header --- */}
-                 <div className="md:hidden flex justify-between items-center mb-4">
-                     <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">
-                         Back
-                     </button>
-                      <div className="text-center" aria-live="polite">
-                          <div className="bg-orange-500 text-white px-4 py-1 rounded-full shadow-md inline-block">
-                              <span className="block text-xs font-medium leading-tight tracking-wider">SCORE</span>
-                              <span className="block text-xl font-bold leading-tight">{score}</span>
-                          </div>
-                      </div>
-                       <div className="text-sm font-semibold text-gray-600 w-16 text-right tabular-nums">
-                          {currentQuestionIndex + 1}/{quizQuestions.length}
-                       </div>
-                 </div>
-
-                {/* --- Desktop Header --- */}
+                {/* Desktop Header */}
                 <header className="hidden md:flex justify-between items-center mb-8 relative">
-                    <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-1.5 rounded shadow">
-                        Back
-                    </button>
+                    <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-1.5 rounded shadow">Back</button>
                     <div className="text-center flex-grow mx-4">
-                         <div className="text-sm font-semibold text-gray-600 mb-1 tabular-nums" aria-hidden="true">
-                             Question {currentQuestionIndex + 1} of {quizQuestions.length}
-                         </div>
+                        <div className="text-sm font-semibold text-gray-600 mb-1 tabular-nums" aria-hidden="true">
+                            Question {currentQuestionIndex + 1} of {quizQuestions.length}
+                        </div>
                         <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 uppercase tracking-wider">Time</h1>
                         <div className="mt-2">
                             <TimerDisplay timeDigits={timeDigits} />
                         </div>
                     </div>
-                     <div className="bg-orange-500 text-white px-3 py-1 rounded shadow text-center" aria-live="polite">
-                         <span className="block text-xs font-medium uppercase tracking-wider">Score</span>
-                         <span className="block text-xl font-bold">{score}</span>
-                     </div>
+                    <div className="bg-orange-500 text-white px-3 py-1 rounded shadow text-center" aria-live="polite">
+                        <span className="block text-xs font-medium uppercase tracking-wider">Score</span>
+                        <span className="block text-xl font-bold">{score}</span>
+                    </div>
                 </header>
 
-                {/* --- Question Area --- */}
+                {/* Question Area */}
                 <main className="text-center mb-6 md:mb-8">
-                     <p className="text-gray-800 mb-4 text-lg lg:text-xl font-medium px-2 leading-relaxed">
-                         <span className="sr-only">Question {currentQuestionIndex + 1} of {quizQuestions.length}:</span>
-                         {currentQuestion?.question}
-                     </p>
+                    <p className="text-gray-800 mb-4 text-lg lg:text-xl font-medium px-2 leading-relaxed">
+                        <span className="sr-only">Question {currentQuestionIndex + 1} of {quizQuestions.length}:</span>
+                        {currentQuestion?.question}
+                    </p>
                     {currentQuestion?.image && (
                         <div className="bg-white inline-block p-4 rounded-lg shadow-md w-4/5 max-w-[250px] md:max-w-xs md:rounded-lg md:border md:border-gray-300 md:p-6 my-4">
                             <img
@@ -413,15 +398,17 @@ function DoingQuiz() {
                             />
                         </div>
                     )}
-                 </main>
-                 {/* --- Mobile Timer Display --- */}
-                 <div className="flex justify-center items-center mb-8 md:hidden">
-                     <TimerDisplay timeDigits={timeDigits} />
-                  </div>
-                {/* --- Answer Buttons Section --- */}
+                </main>
+
+                {/* Mobile Timer Display */}
+                <div className="flex justify-center items-center mb-8 md:hidden">
+                    <TimerDisplay timeDigits={timeDigits} />
+                </div>
+
+                {/* Answer Buttons */}
                 <section className="w-full max-w-sm mx-auto px-4 md:px-0 md:max-w-none md:bg-gradient-to-b from-gray-800 to-black md:p-6 md:rounded-lg md:shadow-inner">
-                     <h2 className="sr-only">Choose an answer:</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 p-2 gap-3 md:gap-4">
+                    <h2 className="sr-only">Choose an answer:</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-2 md:gap-4">
                         {currentQuestion?.answers.map((answer) => {
                             const buttonProps = getButtonProps(answer);
                             return (
@@ -430,28 +417,28 @@ function DoingQuiz() {
                                     onClick={() => handleAnswerClick(answer.id)}
                                     disabled={buttonProps.disabled}
                                     className={buttonProps.className}
-                                    aria-label={`Answer ${answer.id}: ${answer.text}`}>
+                                    aria-label={`Answer ${answer.id}: ${answer.text}`}
+                                >
                                     <span className="font-bold mr-2">{answer.id}.</span> {answer.text}
                                 </button>
                             );
                         })}
                     </div>
                 </section>
-
             </div>
 
-            {/* --- Modals --- */}
-             <CancelModal
-                 isOpen={showCancelModal}
-                 onConfirm={handleCancelConfirm}
-                 onCancel={handleCancelDismiss}
-             />
-             <FeedbackModal
-                 isOpen={Boolean(answerFeedback)}
-                 feedback={answerFeedback}
-                 onContinue={handleContinueAfterFeedback}
-                 isLastQuestion={currentQuestionIndex >= quizQuestions.length - 1}
-             />
+            {/* Modals */}
+            <CancelModal
+                isOpen={showCancelModal}
+                onConfirm={handleCancelConfirm}
+                onCancel={handleCancelDismiss}
+            />
+            <FeedbackModal
+                isOpen={Boolean(answerFeedback)}
+                feedback={answerFeedback}
+                onContinue={handleContinueAfterFeedback}
+                isLastQuestion={currentQuestionIndex >= quizQuestions.length - 1}
+            />
         </div>
     );
 }

@@ -7,13 +7,13 @@ function Summary() {
   const navigate = useNavigate();
 
   // --- Extract data from location state ---
-  const { score = 0, total = 0,wrong =0  } = location.state || {};
+  const { score = 0, total = 0,wrong =0,correct1=0  } = location.state || {};
 
   // --- Calculate derived values ---
   const totalQuestions = total;
   const wrongAnswers = wrong;
   const TotalScore   = 0;
-  const correctAnswer = total-wrong;
+  const correctAnswer = correct1;
   const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   // --- Determine dynamic messages ---

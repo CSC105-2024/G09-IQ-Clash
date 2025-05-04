@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String       @id @default(uuid())
+  username   String       @unique
+  password   String
+  totalScore Int          @default(0)
+  quizzes    QuizResult[]
+}
+
+model Quiz {
+  id        String       @id @default(uuid())
+  category  String
+  questions Question[]
+  results   QuizResult[]
+}
+
+model Question {
+  id       String  @id @default(uuid())
+  quizId   String
+  text     String
+  imageUrl String? // optional
+  options  Json
+  answer   String
+
+  quiz Quiz @relation(fields: [quizId], references: [id])
+}
+
+model QuizResult {
+  id         String @id @default(uuid())
+  userId     String
+  quizId     String
+  score      Int
+  wrong      Int
+  unanswered Int
+
+  user User @relation(fields: [userId], references: [id])
+  quiz Quiz @relation(fields: [quizId], references: [id])
+}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; 
 import { z } from "zod";
 
 const usernameSchema = z.string().min(3, "Username must be at least 3 characters");
@@ -20,8 +20,10 @@ const Modal = ({ title, children, onClose }) => (
 );
 
 const UserPage = () => {
-  const [username, setUsername] = useState("John Cena");
-  const [password, setPassword] = useState("********");
+  const navigate = useNavigate(); 
+
+  const [username, setUsername] = useState("John Cena"); 
+  const [password, setPassword] = useState("********"); 
   const [deleteInput, setDeleteInput] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [oldPassword, setOldPassword] = useState("");
@@ -33,7 +35,7 @@ const UserPage = () => {
   const closeModal = () => { setModalType(null); setErrors({}); setDeleteInput(""); setNewUsername(""); setOldPassword(""); setNewPassword(""); setConfirmPassword(""); };
 
   const handleDelete = () => {
-    if (deleteInput === username) { window.location.href = "/"; closeModal(); }
+    if (deleteInput === username) { window.location.href = "/"; closeModal(); } 
     else setErrors({ delete: "Username does not match." });
   };
 
@@ -44,7 +46,7 @@ const UserPage = () => {
 
   const handlePasswordChange = () => {
     const result = passwordSchema.safeParse({ oldPassword, newPassword, confirmPassword });
-    if (result.success) { setPassword("********"); closeModal(); }
+    if (result.success) { setPassword("********"); closeModal(); } 
     else {
       const fieldErrors = {};
       result.error.errors.forEach(err => { fieldErrors[err.path[0]] = err.message; });
@@ -52,10 +54,27 @@ const UserPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user'); 
+    // Redirect to the login page
+    navigate('/login'); 
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-bgimg p-4 relative">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-bgimg p-4 relative"> 
+      
       <Link to="/"><button className="absolute top-4 left-4 bg-black text-white px-4 py-1 rounded text-sm">Back</button></Link>
+      
+      <button 
+          onClick={handleLogout} 
+          className="absolute top-4 right-4 bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700" // Basic styling, adjust if needed
+      >
+          Log Out
+      </button>
+      {/* --- End Logout Button --- */}
+
       <div className="flex flex-col items-center"><img src="logo.jpg" alt="Logo" className="rounded-full p-3 w-2/4 max-w-lg shadow-lg border-4 border-white" /></div>
+      
       <div className="bg-white p-5 rounded-xl shadow-lg mt-4 w-full md:w-1/2 max-w-md">
         <h2 className="text-lg font-bold text-center">Account Information</h2>
         <div className="mt-4 flex justify-between items-center text-sm md:text-base">
@@ -72,23 +91,24 @@ const UserPage = () => {
 
       {modalType === "delete" && (
         <Modal title="Do you want to delete your account?" onClose={closeModal}>
-          <input type="text" placeholder="Enter your Username" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+          {/* Modal content... */}
+           <input type="text" placeholder="Enter your Username" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
           {errors.delete && <p className="text-red-600 text-sm mb-2">{errors.delete}</p>}
           <button onClick={handleDelete} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Delete</button>
         </Modal>
       )}
-
       {modalType === "editUsername" && (
-        <Modal title="Edit Username" onClose={closeModal}>
-          <input type="text" placeholder="Enter your new Username" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+         <Modal title="Edit Username" onClose={closeModal}>
+          {/* Modal content... */}
+           <input type="text" placeholder="Enter your new Username" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
           {errors.username && <p className="text-red-600 text-sm mb-2">{errors.username}</p>}
           <button onClick={handleUsernameChange} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Edit</button>
         </Modal>
       )}
-
       {modalType === "editPassword" && (
-        <Modal title="Edit Password" onClose={closeModal}>
-          <div><input type="password" placeholder="Old Password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.oldPassword && <p className="text-red-600 text-sm mb-2">{errors.oldPassword}</p>}</div>
+         <Modal title="Edit Password" onClose={closeModal}>
+           {/* Modal content... */}
+            <div><input type="password" placeholder="Old Password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.oldPassword && <p className="text-red-600 text-sm mb-2">{errors.oldPassword}</p>}</div>
           <div><input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.newPassword && <p className="text-red-600 text-sm mb-2">{errors.newPassword}</p>}</div>
           <div><input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.confirmPassword && <p className="text-red-600 text-sm mb-2">{errors.confirmPassword}</p>}</div>
           <button onClick={handlePasswordChange} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Edit</button>

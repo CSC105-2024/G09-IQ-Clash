@@ -8,7 +8,6 @@ interface UserData {
 export const createUserModel = async (data: UserData) => {
   return db.user.create({ data })
 }
-
 export const deleteUserModel = async (id: number) => {
   return db.user.delete({ where: { id } })
 }

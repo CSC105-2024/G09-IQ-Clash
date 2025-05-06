@@ -20,7 +20,6 @@ export const submitSummaryModel = async ({
   await db.user.update({
     where: { id: userId },
     data: {
-
       totalScore: {
         increment: score
       }

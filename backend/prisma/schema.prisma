@@ -52,4 +52,4 @@ model QuizResult {
 
   user User @relation(fields: [userId], references: [id])
   quiz Quiz @relation(fields: [quizId], references: [id])
-}
+  }

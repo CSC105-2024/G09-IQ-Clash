@@ -12,7 +12,8 @@ export const submitSummary = async (c: Context) => {
 }
 
 export const getUserSummary = async (c: Context) => {
-  const userId = c.req.param('userId')
-  const data = await getUserSummaryModel(userId)
+  const userIdParam = c.req.param('userId');
+  const userId = parseInt(userIdParam, 10);
+  const data = await getUserSummaryModel(userId);
   return c.json(data)
 }

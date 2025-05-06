@@ -7,4 +7,5 @@ quizRoutes.get('/', getAllQuizzes)
 quizRoutes.get('/:topic', getQuizByTopic)
 quizRoutes.post('/', createNewQuiz)
 
+
 export default quizRoutes

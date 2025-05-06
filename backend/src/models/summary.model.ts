@@ -7,8 +7,8 @@ export const submitSummaryModel = async ({
   wrong,
   unanswered
 }: {
-  userId: string
-  quizId: string
+  userId: number
+  quizId: number
   score: number
   wrong: number
   unanswered: number
@@ -29,7 +29,7 @@ export const submitSummaryModel = async ({
   return result
 }
 
-export const getUserSummaryModel = async (userId: string) => {
+export const getUserSummaryModel = async (userId: number) => {
   const results = await db.quizResult.findMany({
     where: { userId },
     select: {

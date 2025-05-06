@@ -31,7 +31,7 @@ model Quiz {
 
 model Question {
   id       Int     @id @default(autoincrement())
-  quizId   Int // <<< CHANGED FROM String TO Int
+  quizId   Int
   text     String
   imageUrl String? // optional
   options  Json
@@ -41,15 +41,13 @@ model Question {
 }
 
 model QuizResult {
-  // Note: This ID is still a UUID String. Is this intentional?
-  // If you want it to be 1,2,3.. change to: id Int @id @default(autoincrement())
   id         Int @id @default(autoincrement())
-  userId     Int // <<< CHANGED FROM String TO Int
-  quizId     Int // <<< CHANGED FROM String TO Int
+  userId     Int
+  quizId     Int
   score      Int
   wrong      Int
   unanswered Int
 
   user User @relation(fields: [userId], references: [id])
   quiz Quiz @relation(fields: [quizId], references: [id])
-  }
+}

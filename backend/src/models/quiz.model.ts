@@ -48,10 +48,3 @@ export const postQuizModel = async (quizData: QuizInput) => {
     },
   });
 };
-export const deleteQuizModel = async (id:number) => {
-  return db.quiz.delete({
-    where:{
-      id: id,
-    },
-  });
-};

@@ -5,6 +5,12 @@ const Homepage = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if(storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  },[])
   
   const handlePlayClick = () => {
     if (user) {
@@ -20,10 +26,10 @@ const Homepage = () => {
 
       {user ? (
         <button
-          onClick={() => navigate('/userpage')}
-          className='fixed top-4 right-4 z-20 bg-red-600 text-white font-semibold rounded-md px-4 py-2 hover:bg-red-700 transition-all shadow-lg'
+        onClick={() => navigate('/userpage')}
+        className='fixed top-4 right-4 z-20 bg-red-600 text-white text-lg font-bold rounded-xl px-6 py-3 hover:bg-red-700 transition-all shadow-xl'
         >
-          {user.username}
+        {user.username}
         </button>
       ) : (
         <div className='absolute flex justify-end items-center gap-2 top-4 right-4 w-full mb-2 sm:gap-3 z-20'> 

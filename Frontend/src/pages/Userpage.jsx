@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router-dom'; 
 import { z } from "zod";
+import { getUser, updateUsername, updatePassword, deleteUser } from "../api/user";
 
+// Zod schemas
 const usernameSchema = z.string().min(3, "Username must be at least 3 characters");
 const passwordSchema = z.object({
   oldPassword: z.string().min(6, "Old password is required"),
@@ -9,6 +11,7 @@ const passwordSchema = z.object({
   confirmPassword: z.string(),
 }).refine(data => data.newPassword === data.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
 
+// Reusable modal
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div className="bg-white rounded-xl p-5 w-[90%] max-w-sm shadow-xl animate-fade-in relative">
@@ -21,8 +24,9 @@ const Modal = ({ title, children, onClose }) => (
 
 const UserPage = () => {
   const navigate = useNavigate(); 
-
-  const [username, setUsername] = useState("John Cena"); 
+  const [userId, setUserId] = useState(null);
+  const [username, setUsername] = useState("Loading..."); 
+  const [score, setScore] = useState(0);
   const [password, setPassword] = useState("********"); 
   const [deleteInput, setDeleteInput] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -31,50 +35,129 @@ const UserPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [modalType, setModalType] = useState(null);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const closeModal = () => { setModalType(null); setErrors({}); setDeleteInput(""); setNewUsername(""); setOldPassword(""); setNewPassword(""); setConfirmPassword(""); };
+  // Fetch user info on load
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const savedUser = JSON.parse(localStorage.getItem("user"));
+        console.log(savedUser)
+        if (!savedUser || !savedUser.id) {
+          console.warn("No user found in localStorage. Redirecting.");
+          navigate("/");
+          return;
+        }
+        console.log("before error")
+        const userData = await getUser(savedUser.id);
+          console.log(" error")
+        if (!userData) throw new Error("User not found");
+     
+        setUserId(userData.id);
+  
+        setUsername(userData.username);
+        setScore(userData.totalScore || 0);
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+        navigate("/");
+      }
+    };
 
-  const handleDelete = () => {
-    if (deleteInput === username) { window.location.href = "/"; closeModal(); } 
-    else setErrors({ delete: "Username does not match." });
+    fetchUser();
+  }, [navigate]);
+
+  // Reload user info after update
+  const reloadUser = async () => {
+    try {
+      if (!userId) return;
+      const userData = await getUser(userId);
+      setUsername(userData.username);
+      setScore(userData.totalScore || 0);
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+    }
   };
 
-  const handleUsernameChange = () => {
+  const closeModal = () => {
+    setModalType(null); 
+    setErrors({}); 
+    setDeleteInput(""); 
+    setNewUsername(""); 
+    setOldPassword(""); 
+    setNewPassword(""); 
+    setConfirmPassword("");
+  };
+
+  const handleUsernameChange = async () => {
     const result = usernameSchema.safeParse(newUsername);
-    result.success ? (setUsername(newUsername), closeModal()) : setErrors({ username: result.error.errors[0].message });
+    if (!result.success) {
+      setErrors({ username: result.error.errors[0].message });
+      return;
+    }
+
+    try {
+      await updateUsername(userId, newUsername);
+      await reloadUser();
+      closeModal();
+    } catch (error) {
+      setErrors({ username: error.message });
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     const result = passwordSchema.safeParse({ oldPassword, newPassword, confirmPassword });
-    if (result.success) { setPassword("********"); closeModal(); } 
-    else {
+    if (!result.success) {
       const fieldErrors = {};
       result.error.errors.forEach(err => { fieldErrors[err.path[0]] = err.message; });
       setErrors(fieldErrors);
+      return;
+    }
+
+    try {
+      await updatePassword(userId, newPassword); // Assumes backend handles old password
+      setPassword("********");
+      closeModal();
+    } catch (error) {
+      setErrors({ newPassword: error.message });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteInput !== username) {
+      setErrors({ delete: "Username does not match." });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteUser(userId);
+      localStorage.removeItem("user");
+      navigate("/");
+    } catch (error) {
+      setErrors({ delete: error.message });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user'); 
-    // Redirect to the login page
-    navigate('/login'); 
+    localStorage.removeItem("user");
+    navigate("/");
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-bgimg p-4 relative"> 
-      
-      <Link to="/"><button className="absolute top-4 left-4 bg-black text-white px-4 py-1 rounded text-sm">Back</button></Link>
-      
-      <button 
-          onClick={handleLogout} 
-          className="absolute top-4 right-4 bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700" // Basic styling, adjust if needed
-      >
-          Log Out
+    <div className="flex flex-col items-center justify-center min-h-screen bg-bgimg p-4 relative">
+      <Link to="/">
+        <button className="absolute top-4 left-4 bg-black text-white px-4 py-1 rounded text-sm">Back</button>
+      </Link>
+      <button onClick={handleLogout} className="absolute top-4 right-4 bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700">
+        Log Out
       </button>
-      {/* --- End Logout Button --- */}
 
-      <div className="flex flex-col items-center"><img src="logo.jpg" alt="Logo" className="rounded-full p-3 w-2/4 max-w-lg shadow-lg border-4 border-white" /></div>
-      
+      <div className="flex flex-col items-center">
+        <img src="logo.jpg" alt="Logo" className="rounded-full p-3 w-2/4 max-w-lg shadow-lg border-4 border-white" />
+      </div>
+
       <div className="bg-white p-5 rounded-xl shadow-lg mt-4 w-full md:w-1/2 max-w-md">
         <h2 className="text-lg font-bold text-center">Account Information</h2>
         <div className="mt-4 flex justify-between items-center text-sm md:text-base">
@@ -85,32 +168,41 @@ const UserPage = () => {
           <p><strong>Password:</strong> {password}</p>
           <button className="bg-black text-white px-3 py-1 rounded text-xs hover:bg-gray-800" onClick={() => setModalType("editPassword")}>Edit</button>
         </div>
-        <div className="mt-3 text-sm"><span>Total Score: 100</span></div>
-        <button className="mt-5 bg-black text-red-500 px-2 py-1 rounded text-xs font-bold hover:bg-gray-600" onClick={() => setModalType("delete")}>Delete Account</button>
+        <div className="mt-3 text-sm"><span>Total Score: {score}</span></div>
+        <button className="mt-5 bg-black text-red-500 px-2 py-1 rounded text-xs font-bold hover:bg-gray-600" onClick={() => setModalType("delete")}>
+          Delete Account
+        </button>
       </div>
 
       {modalType === "delete" && (
         <Modal title="Do you want to delete your account?" onClose={closeModal}>
-          {/* Modal content... */}
-           <input type="text" placeholder="Enter your Username" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+          <input type="text" placeholder="Enter your Username" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
           {errors.delete && <p className="text-red-600 text-sm mb-2">{errors.delete}</p>}
-          <button onClick={handleDelete} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Delete</button>
+          <button onClick={handleDelete} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800" disabled={loading}>
+            {loading ? "Deleting..." : "Confirm Delete"}
+          </button>
         </Modal>
       )}
+
       {modalType === "editUsername" && (
-         <Modal title="Edit Username" onClose={closeModal}>
-          {/* Modal content... */}
-           <input type="text" placeholder="Enter your new Username" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+        <Modal title="Edit Username" onClose={closeModal}>
+          <input type="text" placeholder="Enter your new Username" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
           {errors.username && <p className="text-red-600 text-sm mb-2">{errors.username}</p>}
           <button onClick={handleUsernameChange} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Edit</button>
         </Modal>
       )}
+
       {modalType === "editPassword" && (
-         <Modal title="Edit Password" onClose={closeModal}>
-           {/* Modal content... */}
-            <div><input type="password" placeholder="Old Password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.oldPassword && <p className="text-red-600 text-sm mb-2">{errors.oldPassword}</p>}</div>
-          <div><input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.newPassword && <p className="text-red-600 text-sm mb-2">{errors.newPassword}</p>}</div>
-          <div><input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />{errors.confirmPassword && <p className="text-red-600 text-sm mb-2">{errors.confirmPassword}</p>}</div>
+        <Modal title="Edit Password" onClose={closeModal}>
+          <input type="password" placeholder="Old Password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+          {errors.oldPassword && <p className="text-red-600 text-sm mb-2">{errors.oldPassword}</p>}
+
+          <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+          {errors.newPassword && <p className="text-red-600 text-sm mb-2">{errors.newPassword}</p>}
+
+          <input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mb-2 text-sm" />
+          {errors.confirmPassword && <p className="text-red-600 text-sm mb-2">{errors.confirmPassword}</p>}
+
           <button onClick={handlePasswordChange} className="w-full bg-black text-white py-2 rounded font-semibold text-sm hover:bg-gray-800">Confirm Edit</button>
         </Modal>
       )}

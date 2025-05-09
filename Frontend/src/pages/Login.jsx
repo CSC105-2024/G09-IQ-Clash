@@ -10,6 +10,7 @@ export default function Login() {
     try {
       const res = await loginUser(data); 
       console.log("Login success:", res);
+      localStorage.setItem("user", JSON.stringify(res));
       navigate("/"); 
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);

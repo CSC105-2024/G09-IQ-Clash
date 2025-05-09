@@ -1,20 +1,29 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaCrown } from "react-icons/fa";
+import { getLeaderboardapi } from "../api/getLeaderboard";
 
 const Leaderboard = () => {
-  const players = [
-    { name: "John Cena", score: 555, rank: 1 },
-    { name: "Lebron James", score: 444, rank: 2 },
-    { name: "Micheal Jordan", score: 333, rank: 3 },
-    { name: "Pom Pom", score: 222, rank: 4 },
-    { name: "Josh Washing", score: 111, rank: 5 },
-    { name: "AmOK", score: 99, rank: 6 },
-    { name: "Thanapot", score: 88, rank: 7 },
-    { name: "LaptopNokia", score: 77, rank: 8 },
-    { name: "GamingInwZa", score: 66, rank: 9 },
-    { name: "MouseDaBest", score: 55, rank: 10 },
-  ];
+  const [players, setPlayers] = useState([]);
+
+  useEffect(() => {
+    async function handleFetchLeaderboardData() {
+      try {
+        const data = await getLeaderboardapi();
+        console.log("Fetched leaderboard:", data);
+        const rankedData = data.map((player, index) => ({
+          rank: index + 1,
+          name: player.username,
+          score: player.totalScore
+        }));
+        setPlayers(rankedData);
+      } catch (error) {
+        console.error("Failed to fetch leaderboard:", error);
+      }
+    }
+
+    handleFetchLeaderboardData();
+  }, []);
 
   return (
     <div className="w-full h-screen flex flex-col bg-bgimg p-6 text-center">

@@ -1,13 +1,24 @@
 import { db } from '../index.js'
-
-interface UserData {
+import {hash,compare} from 'bcrypt'
+export interface UserData {
   username: string
   password: string
 }
 
 export const createUserModel = async (data: UserData) => {
-  return db.user.create({ data })
+  const hashPassword = await hash(data.password,10)
+  return db.user.create({ data:{
+    ...data,
+    password:hashPassword,
+  } })
 }
+export const findUserByUsername = async (username:string)=>{
+  return db.user.findUnique({where:{username}})
+}
+export const validatePassword = async (input: string, hash: string) => {
+  return compare(input, hash)
+}
+
 export const deleteUserModel = async (id: number) => {
   return db.user.delete({ where: { id } })
 }
@@ -20,8 +31,13 @@ export const loginUserModel = async (data: UserData) => {
   const user = await db.user.findUnique({
     where: { username: data.username }
   })
-  if (!user || user.password !== data.password) {
-    throw new Error('Invalid credentials')
+
+  if (!user) return null
+
+  const isValid = await compare(data.password, user.password)
+  if (!isValid) {
+    return { error: 'Invalid credentials' }
   }
   return user
 }
+

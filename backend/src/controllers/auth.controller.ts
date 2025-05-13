@@ -45,7 +45,7 @@ export const authLogin = async (c: Context) => {
     }
 
     const token = generateToken(user)
-    c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Strict`);
+    c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600;`);
     return c.json({ success: true, token })
   } catch (error) {
     console.error(error)

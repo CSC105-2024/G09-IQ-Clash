@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
 import {createUser,deleteUser,updateUser,loginUser,updatePassword} from '../controllers/user.controller.js'
 import { authMiddleware } from '../middlwares/auth.middleware.js'
+import { authLogin, authSignup } from '../controllers/auth.controller.js'
 const userRoutes = new Hono()
 
-userRoutes.post('/register', createUser)
-userRoutes.post('/login', loginUser)
+userRoutes.post('/register',authSignup, createUser)
+userRoutes.post('/login',authLogin, loginUser)
 
 
 userRoutes.delete('/:id',authMiddleware, deleteUser)

@@ -163,7 +163,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\FLIMS\\Desktop\\ew\\backend\\src\\generated\\prisma",
+      "value": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\Backend\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -177,7 +177,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\FLIMS\\Desktop\\ew\\backend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\Backend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

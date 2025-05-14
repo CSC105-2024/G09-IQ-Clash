@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id         String       @id @default(uuid())
+  id         Int          @id @default(autoincrement())
   username   String       @unique
   password   String
   totalScore Int          @default(0)
@@ -23,15 +23,15 @@ model User {
 }
 
 model Quiz {
-  id        String       @id @default(uuid())
+  id        Int          @id @default(autoincrement())
   category  String
   questions Question[]
   results   QuizResult[]
 }
 
 model Question {
-  id       String  @id @default(uuid())
-  quizId   String
+  id       Int     @id @default(autoincrement())
+  quizId   Int
   text     String
   imageUrl String? // optional
   options  Json
@@ -41,9 +41,9 @@ model Question {
 }
 
 model QuizResult {
-  id         String @id @default(uuid())
-  userId     String
-  quizId     String
+  id         Int @id @default(autoincrement())
+  userId     Int
+  quizId     Int
   score      Int
   wrong      Int
   unanswered Int

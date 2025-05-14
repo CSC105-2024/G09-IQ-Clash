@@ -39,7 +39,7 @@ export const postQuizModel = async (quizData: QuizInput) => {
           text: q.text,
           imageUrl: q.imageUrl,
           options: q.options,
-          answer: q.answer,
+          answer: String(q.answer),
         })),
       },
     },

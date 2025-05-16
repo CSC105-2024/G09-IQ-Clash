@@ -1,12 +1,58 @@
-import type { Context } from 'hono'
+import type { Context } from 'hono';
 import { Prisma } from '../generated/prisma/index.js';
-import {
-  createUserModel,
-  deleteUserModel,
-  updateUserModel,
-  loginUserModel,
-} from '../models/user.model.js'
+import * as userModel from '../models/user.model.js';
+import { generateToken } from '../utils/jwtToken.js';
 
+type AuthBody = {
+  username: string;
+  password: string;
+};
+
+export const getUserById = async (c: Context) => {
+  const idParam = c.req.param('id');
+  const userId = parseInt(idParam, 10);
+
+  if (isNaN(userId)) {
+    return c.json({ error: 'Invalid user ID format' }, 400);
+  }
+
+  try {
+    const user = await userModel.findUserById(userId);
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    return c.json(user);
+  } catch (error: any) {
+    console.error('Error fetching user:', error);
+    return c.json({ error: 'Failed to fetch user' }, 500);
+  }
+};
+
+
+export const Login = async (c: Context) => {
+  try {
+    const { username, password } = await c.req.json<AuthBody>();
+
+    const user = await userModel.findUserByUsername(username);
+    if (!user) {
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
+
+    const isValid = await userModel.validatePassword(password, user.password);
+    if (!isValid) {
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
+
+    const token = generateToken(user);
+    c.header('Set-Cookie', `token=abc123; Path=/; SameSite=Lax; HttpOnly`);
+    return c.json({ success: true, token });
+  } catch (error: any) {
+    console.error("Login error:", error);
+    return c.json({ error: 'Failed to log in' }, 500);
+  }
+};
+
+// Create user without auth (e.g., for admin panel)
 export const createUser = async (c: Context) => {
   try {
     const body = await c.req.json();
@@ -21,31 +67,26 @@ export const createUser = async (c: Context) => {
       return c.json({ error: 'Password must be at least 6 characters long.' }, 400);
     }
 
-    const user = await createUserModel(body);
+    const user = await userModel.createUserModel(body);
+    const token = generateToken(user);
+    c.header('Set-Cookie', `token=abc123; Path=/; SameSite=Lax; HttpOnly`);
     return c.json(user, 201);
-
   } catch (error: any) {
     console.error("Error creating user:", error);
-
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const target = error.meta?.target;
-      let isUsernameConflict = false;
-
-      if (Array.isArray(target)) {
-        isUsernameConflict = target.includes('username');
-      } else if (typeof target === 'string') {
-        isUsernameConflict = target === 'username';
-      }
-
+      const isUsernameConflict = Array.isArray(target)
+        ? target.includes('username')
+        : target === 'username';
       if (isUsernameConflict) {
         return c.json({ error: 'Username already exists.' }, 409);
       }
     }
-
     return c.json({ error: 'Failed to create user' }, 500);
   }
-}
+};
 
+// Delete user by ID
 export const deleteUser = async (c: Context) => {
   const id = c.req.param('id');
   const userId = parseInt(id, 10);
@@ -55,8 +96,8 @@ export const deleteUser = async (c: Context) => {
   }
 
   try {
-    const result = await deleteUserModel(userId);
-    if (result === null || result === undefined) {
+    const result = await userModel.deleteUserModel(userId);
+    if (!result) {
       return c.json({ message: 'User not found' }, 404);
     }
     return c.json({ message: 'User deleted successfully' }, 200);
@@ -64,12 +105,13 @@ export const deleteUser = async (c: Context) => {
     console.error("Error deleting user:", error);
     return c.json({ error: 'Failed to delete user' }, 500);
   }
-}
+};
 
+// Update user by ID (username/password)
 export const updateUser = async (c: Context) => {
   const id = c.req.param('id');
-  const body = await c.req.json();
   const userId = parseInt(id, 10);
+  const body = await c.req.json();
 
   if (isNaN(userId)) {
     return c.json({ error: 'Invalid user ID format. ID must be an integer.' }, 400);
@@ -87,7 +129,7 @@ export const updateUser = async (c: Context) => {
   }
 
   try {
-    const updated = await updateUserModel(userId, body);
+    const updated = await userModel.updateUserModel(userId, body);
     if (!updated) {
       return c.json({ message: 'User not found' }, 404);
     }
@@ -101,12 +143,9 @@ export const updateUser = async (c: Context) => {
       }
       if (error.code === 'P2002') {
         const target = error.meta?.target;
-        let isUsernameConflict = false;
-        if (Array.isArray(target)) {
-          isUsernameConflict = target.includes('username');
-        } else if (typeof target === 'string') {
-          isUsernameConflict = target.includes('username');
-        }
+        const isUsernameConflict = Array.isArray(target)
+          ? target.includes('username')
+          : typeof target === 'string' && target.includes('username');
         if (isUsernameConflict) {
           return c.json({ error: 'Username already exists.' }, 409);
         }
@@ -117,7 +156,9 @@ export const updateUser = async (c: Context) => {
     }
     return c.json({ error: 'Failed to update user' }, 500);
   }
-}
+};
+
+// Update password only
 export const updatePassword = async (c: Context) => {
   const id = c.req.param('id');
   const userId = parseInt(id, 10);
@@ -127,17 +168,17 @@ export const updatePassword = async (c: Context) => {
 
   try {
     const { password } = await c.req.json<{ password: string }>();
-
     if (typeof password !== 'string' || password.length < 6) {
       return c.json({ error: 'New password must be a string and at least 6 characters long.' }, 400);
     }
-    const updatedUser = await updateUserModel(userId, { password: password });
+
+    const updatedUser = await userModel.updateUserModel(userId, { password });
     if (!updatedUser) {
       return c.json({ message: 'User not found' }, 404);
     }
+
     const { password: _, ...userWithoutPassword } = updatedUser;
     return c.json(userWithoutPassword);
-
   } catch (error: any) {
     console.error("Error updating password:", error);
     if (error instanceof SyntaxError) {
@@ -145,25 +186,4 @@ export const updatePassword = async (c: Context) => {
     }
     return c.json({ error: 'Failed to update password' }, 500);
   }
-}
-export const loginUser = async (c: Context) => {
-  try {
-    const body = await c.req.json()
-    if (typeof body.username !== 'string' || typeof body.password !== 'string') {
-      return c.json({ error: 'Username and password are required.' }, 400);
-    }
-    const result = await loginUserModel(body)
-    if (!result) {
-      return c.json({ error: 'Invalid username or password' }, 401);
-    }
-    if (typeof result === 'object' && result !== null && 'error' in result) {
-      const errorMessage = typeof result.error === 'string' ? result.error : 'Invalid username or password';
-      return c.json({ error: errorMessage }, 401);
-    }
-    return c.json(result)
-
-  } catch (error: any) {
-    console.error("Error logging in user:", error);
-    return c.json({ error: 'Login failed due to server error' }, 500);
-  }
-}
+};

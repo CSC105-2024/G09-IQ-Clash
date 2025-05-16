@@ -1,14 +1,25 @@
-import { Hono } from 'hono'
-import {createUser,deleteUser,updateUser,loginUser,updatePassword} from '../controllers/user.controller.js'
-import { authMiddleware } from '../middlwares/auth.middleware.js'
-import { authLogin, authSignup } from '../controllers/auth.controller.js'
-const userRoutes = new Hono()
+import { Hono } from 'hono';
+import {
+  createUser,
+  deleteUser,
+  updateUser,
+  updatePassword,
+  Login,
+  getUserById
+  
+ 
+} from '../controllers/user.controller.js'; 
 
-userRoutes.post('/register',authSignup, createUser)
-userRoutes.post('/login',authLogin, loginUser)
+const userRoute = new Hono();
 
 
-userRoutes.delete('/:id',authMiddleware, deleteUser)
-userRoutes.patch('/editUsername/:id',authMiddleware, updateUser)
-userRoutes.patch('/editPassword/:id',authMiddleware ,updatePassword)
-export default userRoutes
+userRoute.post('/register', createUser);
+userRoute.post('/login', Login);
+userRoute.get('/:id',getUserById);
+
+userRoute.post('/', createUser); 
+userRoute.delete('/:id', deleteUser);
+userRoute.put('/:id', updateUser);
+userRoute.patch('/:id/password', updatePassword);
+
+export default userRoute;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router-dom'; 
 import { z } from "zod";
-import { getUser, updateUsername, updatePassword, deleteUser } from "../api/user";
+import { fetchUserById, updateUsername, updatePassword, deleteUser } from "../api/user";
 
 // Zod schemas
 const usernameSchema = z.string().min(3, "Username must be at least 3 characters");

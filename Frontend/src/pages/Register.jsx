@@ -32,7 +32,8 @@ export default function Register() {
       const { confirmPassword, ...credentials } = data;
       const res = await registerUser(credentials); 
 
-      localStorage.setItem("user", JSON.stringify(res));
+      localStorage.setItem("user", JSON.stringify({ id: res.id, username: res.username, token: res.token }));
+
       navigate("/");
     } catch (err) {
       console.error("Registration failed:", err.response?.data || err.message);

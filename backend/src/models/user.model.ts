@@ -5,6 +5,13 @@ export interface UserData {
   password: string
 }
 
+export const findUserById = async (id: number) => {
+  return db.user.findUnique({
+    where: { id },
+    select: { id: true, username: true } 
+  });
+};
+
 export const createUserModel = async (data: UserData) => {
   const hashPassword = await hash(data.password,10)
   return db.user.create({ data:{

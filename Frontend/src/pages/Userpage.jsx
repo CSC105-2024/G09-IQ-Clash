@@ -37,34 +37,55 @@ const UserPage = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Fetch user info on load
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const savedUser = JSON.parse(localStorage.getItem("user"));
-        console.log(savedUser)
-        if (!savedUser || !savedUser.id) {
-          console.warn("No user found in localStorage. Redirecting.");
-          navigate("/");
-          return;
-        }
-        console.log("before error")
-        const userData = await getUser(savedUser.id);
-          console.log(" error")
-        if (!userData) throw new Error("User not found");
-     
-        setUserId(userData.id);
-  
-        setUsername(userData.username);
-        setScore(userData.totalScore || 0);
-      } catch (error) {
-        console.error("Failed to fetch user:", error);
-        navigate("/");
-      }
-    };
 
-    fetchUser();
-  }, [navigate]);
+  // Fetch user info on load
+ function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+// Then in useEffect:
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const savedUser = JSON.parse(localStorage.getItem("user"));
+      if (!savedUser || !savedUser.token) {
+        navigate("/");
+        return;
+      }
+
+      const decoded = parseJwt(savedUser.token);
+      if (!decoded) throw new Error("Invalid token");
+
+      const userIdFromToken = decoded.userId;
+
+      const userData = await getUser(userIdFromToken);
+      if (!userData) throw new Error("User not found");
+
+      setUserId(userData.id);
+      setUsername(userData.username);
+      setScore(userData.totalScore || 0);
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      navigate("/");
+    }
+  };
+
+  fetchUser();
+}, [navigate]);
+
+
 
   // Reload user info after update
   const reloadUser = async () => {

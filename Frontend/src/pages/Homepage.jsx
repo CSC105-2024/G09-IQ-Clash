@@ -9,7 +9,6 @@ const Homepage = () => {
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (!userData) return;
-
     try {
       const { token } = JSON.parse(userData);
       if (!token) return;
@@ -18,7 +17,10 @@ const Homepage = () => {
       const base64Payload = token.split('.')[1];
       const payload = JSON.parse(atob(base64Payload));
       const userId = payload.userId || payload.userID || payload.userID || payload.userId; // adjust key if needed
-
+      console.log('userData:', userData);
+      console.log('token:', token);
+      console.log('Decoded JWT payload:', payload);
+      console.log('Extracted userId:', userId);
       if (userId) {
         fetchUserById(userId)
           .then((user) => {

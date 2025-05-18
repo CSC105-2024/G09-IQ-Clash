@@ -44,7 +44,7 @@ export const Login = async (c: Context) => {
     }
 
     const token = generateToken(user);
-    c.header('Set-Cookie', `token=abc123; Path=/; SameSite=Lax; HttpOnly`);
+    c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/;`);
     return c.json({ success: true, token });
   } catch (error: any) {
     console.error("Login error:", error);
@@ -69,7 +69,7 @@ export const createUser = async (c: Context) => {
 
     const user = await userModel.createUserModel(body);
     const token = generateToken(user);
-    c.header('Set-Cookie', `token=abc123; Path=/; SameSite=Lax; HttpOnly`);
+    c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/;`);
     return c.json(user, 201);
   } catch (error: any) {
     console.error("Error creating user:", error);

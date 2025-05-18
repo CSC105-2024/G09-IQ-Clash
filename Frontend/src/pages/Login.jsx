@@ -11,17 +11,20 @@
     const navigate = useNavigate();
 
     const onSubmit = async (data) => {
-      try {
-        const res = await loginUser(data); // res should include { id, username, token }
-        console.log("Login success:", res);
-        // Save user info and token together
-        localStorage.setItem("user", JSON.stringify({ id: res.id, username: res.username, token: res.token }));
-        navigate("/"); // Go to homepage
-      }catch (err) {
-        console.error("Login failed:", err.response?.data || err.message);
-        alert("Login failed: " + (err.response?.data?.message || err.message));
-      }
-};
+    try {
+      const res = await loginUser(data.username, data.password);
+      console.log("Login success:", res);
+      localStorage.setItem("user", JSON.stringify({
+        id: res.id,
+        username: res.username,
+        token: res.token
+      }));
+      navigate("/");
+    } catch (err) {
+      console.error("Login failed:", err.response?.data || err.message);
+      alert("Login failed: " + (err.response?.data?.error || err.message));
+    }
+    };
 
 
     return (

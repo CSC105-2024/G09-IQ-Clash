@@ -28,18 +28,18 @@ export default function Register() {
   });
 
   const onSubmit = async (data) => {
-    try {
-      const { confirmPassword, ...credentials } = data;
-      const res = await registerUser(credentials); 
+  try {
+    const { username, password } = data;
+    const res = await registerUser(username, password);
 
-      localStorage.setItem("user", JSON.stringify({ id: res.id, username: res.username, token: res.token }));
+    localStorage.setItem("user", JSON.stringify({ id: res.id, username: res.username, token: res.token }));
+    navigate("/");
+  } catch (err) {
+    console.error("Registration failed:", err.response?.data || err.message);
+    alert("Registration failed: " + (err.response?.data?.error || err.message));
+  }
+};
 
-      navigate("/");
-    } catch (err) {
-      console.error("Registration failed:", err.response?.data || err.message);
-      alert("Registration failed: " + (err.response?.data?.message || err.message));
-    }
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">

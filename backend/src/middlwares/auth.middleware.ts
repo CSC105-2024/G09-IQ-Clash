@@ -1,32 +1,36 @@
-import type { MiddlewareHandler } from 'hono'
-import { verifyToken } from '../utils/jwtToken.js'
+import type { Context } from "hono";
+import { verifyToken } from "../utils/jwtToken.js";
 
-// Auth middleware to check JWT in cookie
-export const authMiddleware: MiddlewareHandler = async (c, next) => {
-  const cookie = c.req.header('Cookie')
-  if (!cookie) {
-    return c.json({ error: 'Unauthorized: No cookie found' }, 401)
-  }
-  const token = getTokenFromCookie(cookie)
-  if (!token) {
-    return c.json({ error: 'Unauthorized: Token not found' }, 401)
-  }
-  const payload = verifyToken(token)
-  if (!payload) {
-    return c.json({ error: 'Unauthorized: Invalid or expired token' }, 401)
-  }
-  // Store userId in context for use in routes
-  c.set('userId', payload.userId)
-  await next()
-}
-// Helper function to extract "token=xyz" from cookie string
-function getTokenFromCookie(cookieHeader: string): string | null {
-  const cookies = cookieHeader.split(';').map(cookie => cookie.trim())
-  for (const cookie of cookies) {
-    const [key, value] = cookie.split('=')
-    if (key === 'token') {
-      return value
+export const authMiddleware = async (c: Context, next: () => Promise<void>) => {
+    let token: string | undefined;
+    // Try Authorization header first
+    const authHeader = c.req.header('authorization');
+    if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
     }
-  }
-  return null
-}
+    // Fallback: Try cookie
+    if (!token) {
+        const cookie = c.req.header("cookie");
+        const match = cookie?.match(/userToken=([^;]+)/);
+        if (match) {
+            token = match[1];
+        }
+    }
+    if (!token) {
+        return c.text("Unauthorized", 401);
+    }
+    // check for secret
+    if (!process.env.JWT_SECRET) {
+        throw new Error("JWT_SECRET is not defined");
+    }
+    try {
+        const decoded = verifyToken(token);
+        if (!decoded) {
+            return c.text("Invalid token", 401);
+        }
+        c.set("user", { id: decoded.id });
+        await next();
+    } catch (error) {
+        return c.text("Invalid token", 401);
+    }
+};

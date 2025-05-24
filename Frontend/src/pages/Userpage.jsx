@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router-dom'; 
 import { z } from "zod";
-import { fetchUserById, updateUsername, updatePassword, deleteUser } from "../api/user";
+import { fetchCurrentUser, updateUsername, updatePassword, deleteUser, logoutUser } from "../api/auth";
 
 // Zod schemas
 const usernameSchema = z.string().min(3, "Username must be at least 3 characters");
@@ -39,51 +39,22 @@ const UserPage = () => {
 
 
   // Fetch user info on load
- function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
-
-// Then in useEffect:
-useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      const savedUser = JSON.parse(localStorage.getItem("user"));
-      if (!savedUser || !savedUser.token) {
-        navigate("/");
-        return;
-      }
-
-      const decoded = parseJwt(savedUser.token);
-      if (!decoded) throw new Error("Invalid token");
-
-      const userIdFromToken = decoded.userId;
-
-      const userData = await getUser(userIdFromToken);
-      if (!userData) throw new Error("User not found");
-
-      setUserId(userData.id);
-      setUsername(userData.username);
-      setScore(userData.totalScore || 0);
-    } catch (error) {
-      console.error("Failed to fetch user:", error);
-      navigate("/");
-    }
-  };
-
-  fetchUser();
-}, [navigate]);
+ useEffect(() => {
+   const checkAuth = async () => {
+     try {
+       const data = await fetchCurrentUser();
+       if (data) {
+         setUserId(data.user.id);
+         setUsername(data.user.username);
+         setScore(data.user.totalScore);
+       }
+     } catch (error) {
+       console.error(error);
+     }
+   };
+   checkAuth();
+   }, []);
+ 
 
 
 
@@ -115,10 +86,10 @@ useEffect(() => {
       setErrors({ username: result.error.errors[0].message });
       return;
     }
-
     try {
       await updateUsername(userId, newUsername);
       await reloadUser();
+      setUsername(newUsername);
       closeModal();
     } catch (error) {
       setErrors({ username: error.message });
@@ -135,8 +106,9 @@ useEffect(() => {
     }
 
     try {
-      await updatePassword(userId, newPassword); // Assumes backend handles old password
-      setPassword("********");
+      await updatePassword(userId,oldPassword,newPassword); // Assumes backend handles old password
+      const masked = "*".repeat(newPassword.length);
+      setPassword(masked);
       closeModal();
     } catch (error) {
       setErrors({ newPassword: error.message });
@@ -152,7 +124,6 @@ useEffect(() => {
     try {
       setLoading(true);
       await deleteUser(userId);
-      localStorage.removeItem("user");
       navigate("/");
     } catch (error) {
       setErrors({ delete: error.message });
@@ -161,8 +132,8 @@ useEffect(() => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  const handleLogout = async() => {
+    await logoutUser();
     navigate("/");
   };
 

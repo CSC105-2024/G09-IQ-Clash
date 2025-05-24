@@ -1,5 +1,6 @@
 import { db } from '../index.js'
 import {hash,compare} from 'bcrypt'
+import bcrypt from 'bcrypt'
 export interface UserData {
   username: string
   password: string
@@ -8,14 +9,20 @@ export interface UserData {
 export const findUserById = async (id: number) => {
   return db.user.findUnique({
     where: { id },
-    select: { id: true, username: true } 
   });
 };
 
-export const createUserModel = async (data: UserData) => {
-  const hashPassword = await hash(data.password,10)
+export const getuserByUsername = async(username:string) => {
+  const user = await db.user.findUnique({where: {username}});
+  if(!user) return null;
+  return user;
+}
+
+//create account
+export const createUserModel = async (_username:string,password:string) => {
+  const hashPassword = await hash(password,10)
   return db.user.create({ data:{
-    ...data,
+    username:_username,
     password:hashPassword,
   } })
 }
@@ -30,21 +37,32 @@ export const deleteUserModel = async (id: number) => {
   return db.user.delete({ where: { id } })
 }
 
-export const updateUserModel = async (id: number, data: Partial<UserData>) => {
-  return db.user.update({ where: { id }, data, })
+//update username
+export const updateUsername = async (id:number,newUsername:string) => {
+  return db.user.update({
+    where:{id},
+    data:{
+      username:newUsername
+    }
+  })
 }
 
-export const loginUserModel = async (data: UserData) => {
-  const user = await db.user.findUnique({
-    where: { username: data.username }
-  })
+//update password
+export const updatePassword = async(id:number,newPassword:string) => {
+  const hashedPassword = await bcrypt.hash(newPassword,10);
+    return db.user.update({
+      where:{id},
+      data: {
+        password: hashedPassword
+      }
+    })
+}
 
-  if (!user) return null
-
-  const isValid = await compare(data.password, user.password)
-  if (!isValid) {
-    return { error: 'Invalid credentials' }
-  }
-  return user
+export const loginUserModel = async (username: string, password:string) => {
+    const user = await db.user.findUnique({where:{username}})
+    if(!user) return null;
+    const passwordMatch = await bcrypt.compare(password,user.password);
+    if(!passwordMatch) return null;
+    return user;
 }
 

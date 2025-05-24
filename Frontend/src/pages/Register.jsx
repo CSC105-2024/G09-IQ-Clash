@@ -30,9 +30,10 @@ export default function Register() {
   const onSubmit = async (data) => {
   try {
     const { username, password } = data;
-    const res = await registerUser(username, password);
-
-    localStorage.setItem("user", JSON.stringify({ id: res.id, username: res.username, token: res.token }));
+    const register = await registerUser(username, password);
+    if(!register){
+      console.error("Register failed.")
+    }
     navigate("/");
   } catch (err) {
     console.error("Registration failed:", err.response?.data || err.message);

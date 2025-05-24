@@ -1,31 +1,27 @@
-import jwt from "jsonwebtoken";
-
-//define playload structure
-type JwtPayload ={
-    userId : number
+import jwt from 'jsonwebtoken';
+type Payload ={
+    id:number
 }
 
-//create JWT with user's id 
-export const generateToken = (user: {id:number}) => {
-    const secret = process.env.JWT_SECRET
-    if(!secret){
-        throw new Error('jwt_secret_key is not defined in environment variables')
-    }
-    return jwt.sign({userId: user.id},secret,{expiresIn:'1h'})
-}
+export const generateToken = (payload: Payload, expiresIn: string): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not defined");
+  }
+  if(expiresIn === '7d'){
+    return jwt.sign(payload, secret, { expiresIn: '7d' });
+  }
+  return jwt.sign(payload, secret, { expiresIn: '1d' });
+};
 
-export const verifyToken = (token: string): JwtPayload | null => {
+export const verifyToken = (token: string): Payload | null => {
   const secret = process.env.JWT_SECRET
-
   if (!secret) {
     throw new Error('JWT_SECRET is not defined in environment variables')
   }
-
   try {
-    // jwt.verify returns "any" — we assert the expected payload shape
-    return jwt.verify(token, secret) as JwtPayload
+    return jwt.verify(token, secret) as Payload
   } catch (error) {
-    // If token is expired or invalid, return null
     return null
   }
 }

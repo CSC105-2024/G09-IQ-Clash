@@ -1,38 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchUserById } from '../api/user.js'; 
+import { fetchCurrentUser} from '../api/auth.js'; 
 
 const Homepage = () => {
   const [username, setUsername] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) return;
+  const checkAuth = async () => {
     try {
-      const { token } = JSON.parse(userData);
-      if (!token) return;
-
-      // Decode token to get userId (simple base64 decode)
-      const base64Payload = token.split('.')[1];
-      const payload = JSON.parse(atob(base64Payload));
-      const userId = payload.userId || payload.userID || payload.userID || payload.userId; // adjust key if needed
-      console.log('userData:', userData);
-      console.log('token:', token);
-      console.log('Decoded JWT payload:', payload);
-      console.log('Extracted userId:', userId);
-      if (userId) {
-        fetchUserById(userId)
-          .then((user) => {
-            if (user?.username) setUsername(user.username);
-          })
-          .catch((err) => {
-            console.error('Failed to fetch username:', err);
-          });
+      const data = await fetchCurrentUser();
+      if (data && data.user) {
+        setUsername(data.user.username); 
       }
     } catch (error) {
-      console.error('Error parsing token:', error);
+      console.error(error);
     }
+  };
+  checkAuth();
   }, []);
 
   const handlePlayClick = () => {

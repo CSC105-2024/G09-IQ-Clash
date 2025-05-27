@@ -68,7 +68,18 @@ QUIZ is an interactive platform where users take quizzes on topics like sports, 
 |--------|----------------------|-------------------------------------|
 | GET   | `/leaderboard`        |  To get the top 10 users with the highest score  |
             
+### **Summary**
+| Method | Endpoint             | Description                         |
+|--------|----------------------|-------------------------------------|
+| GET   | `/summary/:userid`    |  To get total score of user         |
+| PoST  | `/summary/result`     |  To send result to database         |
 
+### **Quiz**
+| Method | Endpoint             | Description                         |
+|--------|----------------------|-------------------------------------|
+| GET   | `/summary`            |  To get all quiz                    |
+| GET   | `/summary/:topic`     |  To get quiz by topic               |
+| POST  | `/summary/`           |  To create new quiz                 |
 
 ### :rocket: Getting Started - Node.js Server
 

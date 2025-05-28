@@ -1,9 +1,9 @@
-// Imports
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Axios } from '../utils/axiosInstance';
+import { fetchCurrentUser } from '../api/auth.js';
+import { submitSummary } from '../api/summary.js';
+import { getQuizQuestions } from '../api/quiz.js';
 
-// Helper Functions
 function shuffleArray(array) {
     let currentIndex = array.length, randomIndex;
     while (currentIndex !== 0) {
@@ -14,7 +14,6 @@ function shuffleArray(array) {
     return array;
 }
 
-// Modal Components
 function QuizOverModal({ isOpen, timeLeft, finalScore, totalQuestions, error, onContinue }) {
     if (!isOpen) return null;
     const titleId = "quizOverModalTitle"; const descriptionId = "quizOverModalDesc";
@@ -64,7 +63,6 @@ function FeedbackModal({ feedback, isOpen, onContinue, isLastQuestion }) {
     );
 }
 
-// Display Components
 function TimerDisplay({ timeDigits }) {
     return (
         <div className="flex justify-center items-center space-x-1 lg:space-x-1.5" aria-live="off">
@@ -77,9 +75,7 @@ function TimerDisplay({ timeDigits }) {
     );
 }
 
-// Main Quiz Component
 function DoingQuiz() {
-    // --- Hooks and State Initialization ---
     const { topic = 'default', time = '01:00', items = '10' } = useParams();
     const navigate = useNavigate();
 
@@ -93,10 +89,10 @@ function DoingQuiz() {
                 return Math.max(0, minutes * 60 + seconds);
             }
         }
-        return 60; // Default to 60 seconds if time format is invalid
+        return 60;
     }, [time]);
 
-    const [quizStatus, setQuizStatus] = useState('loading'); // 'loading', 'running', 'finished', 'error'
+    const [quizStatus, setQuizStatus] = useState('loading');
     const [quizError, setQuizError] = useState(null);
     const [quizQuestions, setQuizQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -107,10 +103,24 @@ function DoingQuiz() {
     const [finalScore, setFinalScore] = useState(0);
     const [finalUnanswered, setFinalUnanswered] = useState(0);
     const [isAnswerSelected, setIsAnswerSelected] = useState(false);
-    const [answerFeedback, setAnswerFeedback] = useState(null); // { isCorrect: boolean, correctAnswerText: string, selectedAnswerId: string }
+    const [answerFeedback, setAnswerFeedback] = useState(null);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [userId, setUserId] = useState(null);
+    const [quizId, setQuizId] = useState(null);
 
-    // --- Data Fetching Effect ---
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const data = await fetchCurrentUser();
+                if (data) {
+                    setUserId(data.user.id);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        checkAuth();
+    }, []);
     useEffect(() => {
         const fetchQuizData = async () => {
             if (!topic || topic === 'default') {
@@ -119,7 +129,6 @@ function DoingQuiz() {
                 return;
             }
 
-            // Reset state for new quiz load or retry
             setQuizStatus('loading');
             setQuizError(null);
             setQuizQuestions([]);
@@ -133,46 +142,47 @@ function DoingQuiz() {
             setIsAnswerSelected(false);
             setAnswerFeedback(null);
             setShowCancelModal(false);
+            setQuizId(null);
 
             try {
-                const response = await Axios.get(`/quiz/${encodeURIComponent(topic)}`);
+                const quizData = await getQuizQuestions(topic);
 
-                if (response.data && Array.isArray(response.data.questions)) {
+                if (quizData && Array.isArray(quizData.questions)) {
+                    setQuizId(quizData.id);
                     const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
-                    // Process questions to ensure consistent answer format and add display keys
-                    const allQuestions = response.data.questions.map(q => {
+                    const allQuestions = quizData.questions.map(q => {
                         let processedAnswers = [];
                         if (Array.isArray(q.options)) {
                             processedAnswers = q.options.map((option, index) => {
-                                const optionIdStr = String(option.id || index); // Ensure ID is a string
+                                const optionIdStr = String(option.id || index);
                                 let displayLabel = optionIdStr.toUpperCase();
                                 return {
                                     id: optionIdStr,
-                                    text: String(option.text || ''), // Ensure text is a string
+                                    text: String(option.text || ''),
                                     displayKey: displayLabel
                                 };
                             });
-                        } else if (typeof q.options === 'object' && q.options !== null) { // Handle object-based options
+                        } else if (typeof q.options === 'object' && q.options !== null) {
                             processedAnswers = Object.entries(q.options).map(([key, value], index) => {
                                 let optionText = '';
                                 if (typeof value === 'string') {
                                     optionText = value;
                                 } else if (typeof value === 'object' && value !== null && typeof value.text === 'string') {
-                                    optionText = value.text; // If value is an object like {text: "Option"}
+                                    optionText = value.text;
                                 } else {
-                                    optionText = String(value); // Fallback to string conversion
+                                    optionText = String(value);
                                 }
                                 return {
-                                    id: String(key), // Ensure ID is a string
+                                    id: String(key),
                                     text: optionText,
-                                    displayKey: optionLetters[index] || String(index + 1) // Assign A, B, C...
+                                    displayKey: optionLetters[index] || String(index + 1)
                                 };
                             });
                         }
 
                         return {
                             ...q,
-                            answer: String(q.answer), // Ensure correct answer ID is a string
+                            answer: String(q.answer),
                             answers: processedAnswers,
                         };
                     });
@@ -183,7 +193,6 @@ function DoingQuiz() {
                         return;
                     }
 
-                    // Filter out questions that might have ended up with no answer choices after processing
                     const validQuestions = allQuestions.filter(q => q.answers && q.answers.length > 0);
 
                     if (validQuestions.length === 0) {
@@ -196,7 +205,6 @@ function DoingQuiz() {
                     const selectedQuestions = shuffleArray([...validQuestions]).slice(0, questionsToTake);
 
                     if (selectedQuestions.length === 0 && questionsToTake > 0) {
-                        // This case should ideally not be hit if validQuestions has items, but as a safeguard:
                         setQuizError(`Could not select any valid questions for topic "${topic}" after filtering.`);
                         setQuizStatus('error');
                         return;
@@ -206,32 +214,60 @@ function DoingQuiz() {
                     setQuizStatus('running');
 
                 } else {
-                    setQuizError(`Failed to load questions for "${topic}". Invalid data format.`);
+                    setQuizError(`Failed to load questions for "${topic}". Invalid data format received.`);
                     setQuizStatus('error');
                 }
             } catch (error) {
                 if (error.response && error.response.status === 404) {
                     setQuizError(`Quiz topic "${topic}" not found.`);
                 } else {
-                    // console.error("Error fetching quiz:", error);
-                    setQuizError("An error occurred while fetching the quiz. Please try again later.");
+                    setQuizError(error.message || "An error occurred while fetching the quiz. Please try again later.");
                 }
                 setQuizStatus('error');
             }
         };
 
         fetchQuizData();
-    }, [topic, totalItems, initialTimeInSeconds]); // Rerun if topic, totalItems, or initialTimeInSeconds changes
+    }, [topic, totalItems, initialTimeInSeconds]);
 
+    const handleQuizSubmission = useCallback(async (currentScore, currentWrongQ, currentUnanswered) => {
+        if (userId && quizId !== null && quizStatus !== 'submitting') {
+            setQuizStatus('submitting');
+            try {
+                const summaryData = {
+                    userId: userId,
+                    quizId: quizId,
+                    score: currentScore,
+                    wrong: currentWrongQ,
+                    unanswered: currentUnanswered
+                };
+                await submitSummary(summaryData);
+                console.log("Quiz results submitted successfully via imported function");
+                const data = await fetchCurrentUser();
+                if (data) {
+                }
+            } catch (error) {
+                console.error("Error during submission process in component:", error);
+            } finally {
+                setQuizStatus('finished');
+            }
+        } else {
+            if (quizStatus === 'submitting') {
+                console.log("Submission already in progress.");
+            } else {
+                console.warn("Missing userId or quizId, cannot submit results. Proceeding to finish.", { userId, quizId });
+            }
+            setQuizStatus('finished');
+        }
+    }, [userId, quizId, quizStatus, setQuizStatus, fetchCurrentUser]);
 
-    // --- Timer Effect ---
     useEffect(() => {
         if (quizStatus !== 'running' || timeLeft <= 0) {
-            if (timeLeft <= 0 && quizStatus === 'running') { // Ensure this only runs once when time runs out
+            if (timeLeft <= 0 && quizStatus === 'running') {
                 setFinalScore(score);
                 const unansweredCount = Math.max(0, quizQuestions.length - (correct + wrongQ));
                 setFinalUnanswered(unansweredCount);
-                setQuizStatus('finished');
+                handleQuizSubmission(score, correct, wrongQ, unansweredCount);
             }
             return;
         }
@@ -239,9 +275,8 @@ function DoingQuiz() {
             setTimeLeft((prevTime) => Math.max(0, prevTime - 1));
         }, 1000);
         return () => clearInterval(timerId);
-    }, [timeLeft, quizStatus, score, quizQuestions, correct, wrongQ]);
+    }, [timeLeft, quizStatus, score, correct, wrongQ, quizQuestions, handleQuizSubmission]);
 
-    // --- Memoized Values ---
     const currentQuestion = useMemo(() => {
         if (quizStatus !== 'running' || quizQuestions.length === 0 || currentQuestionIndex >= quizQuestions.length) {
             return null;
@@ -258,32 +293,36 @@ function DoingQuiz() {
         ];
     }, [timeLeft]);
 
-    const isQuizOver = useMemo(() => quizStatus === 'finished' || quizStatus === 'error', [quizStatus]);
+    const isQuizOver = useMemo(() => quizStatus === 'finished' || quizStatus === 'error' || quizStatus === 'submitting', [quizStatus]);
 
-    // --- Callback Functions ---
     const handleAnswerClick = useCallback((selectedAnswerId) => {
         if (!currentQuestion || isAnswerSelected || quizStatus !== 'running') return;
 
         const isCorrect = selectedAnswerId === currentQuestion.answer;
+        let newScore = score;
+        let newCorrect = correct;
+        let newWrongQ = wrongQ;
 
         if (isCorrect) {
-            setCorrect(prevCorrect => prevCorrect + 1);
-            setScore(prevScore => prevScore + 1);
+            newCorrect = correct + 1;
+            newScore = score + 1;
         } else {
-            setWrongQ(prevWrong => prevWrong + 1);
-            if(score == 0); // if score is 0, do not decrement
-            else setScore(prevScore => prevScore - 1); // Decrement score for wrong answer, but not below 0
+            newWrongQ = wrongQ + 1;
+            if(score > 0) {
+                newScore = score - 1;
+            }
         }
+        setCorrect(newCorrect);
+        setScore(newScore);
+        setWrongQ(newWrongQ);
 
-        // Find the text of the correct answer for display
         const correctOption = currentQuestion.answers?.find(a => a.id === currentQuestion.answer);
         let correctAnswerDisplayText;
 
         if (correctOption && typeof correctOption.text === 'string') {
             correctAnswerDisplayText = correctOption.text;
         } else {
-            // Fallback for scenarios where correct answer text isn't directly available
-            if (currentQuestion.answer === "") { // Explicitly checking for empty string answer key
+            if (currentQuestion.answer === "") {
                 correctAnswerDisplayText = '(The correct answer key stored in the database is an empty string, and no option matches this.)';
             } else if (currentQuestion.answer !== null && typeof currentQuestion.answer !== 'undefined') {
                 correctAnswerDisplayText = `(No option found for the stored correct answer key: "${currentQuestion.answer}")`;
@@ -298,7 +337,7 @@ function DoingQuiz() {
             selectedAnswerId: selectedAnswerId
         });
         setIsAnswerSelected(true);
-    }, [currentQuestion, isAnswerSelected, quizStatus, score]); // Added score to dependency array due to its direct usage in logic
+    }, [currentQuestion, isAnswerSelected, quizStatus, score, correct, wrongQ]);
 
     const handleContinueAfterFeedback = useCallback(() => {
         setIsAnswerSelected(false);
@@ -307,24 +346,23 @@ function DoingQuiz() {
         if (nextQuestionIndex < quizQuestions.length) {
             setCurrentQuestionIndex(nextQuestionIndex);
         } else {
-            // Quiz finished by answering all questions
             setFinalScore(score);
-            const unansweredCount = Math.max(0, quizQuestions.length - (correct + wrongQ)); // Should be 0 if all answered
+            const unansweredCount = Math.max(0, quizQuestions.length - (correct + wrongQ));
             setFinalUnanswered(unansweredCount);
-            setQuizStatus('finished');
+            handleQuizSubmission(score, correct, wrongQ, unansweredCount);
         }
-    }, [currentQuestionIndex, quizQuestions.length, score, correct, wrongQ]);
+    }, [currentQuestionIndex, quizQuestions.length, score, correct, wrongQ, handleQuizSubmission]);
 
     const handleBackClick = useCallback(() => setShowCancelModal(true), []);
     const handleCancelConfirm = useCallback(() => navigate("/"), [navigate]);
     const handleCancelDismiss = useCallback(() => setShowCancelModal(false), []);
 
     const handleQuizEndContinue = useCallback(() => {
-        const totalQs = quizQuestions.length > 0 ? quizQuestions.length : totalItems; // Use totalItems as fallback if questions array is empty (e.g., on error before load)
+        const totalQs = quizQuestions.length > 0 ? quizQuestions.length : totalItems;
         navigate("summary", {
             state: {
                 score: finalScore,
-                correct1: correct, // ensure key matches what SummaryPage expects
+                correct: correct,
                 wrong: wrongQ,
                 total: totalQs,
                 unanswered: finalUnanswered
@@ -333,74 +371,65 @@ function DoingQuiz() {
     }, [navigate, finalScore, correct, wrongQ, quizQuestions, totalItems, finalUnanswered]);
 
     const handleImageError = useCallback((event) => {
-        // Hide the image element if it fails to load
         event.target.style.display = 'none';
-        // Optionally, you could set a placeholder or log an error
     }, []);
 
     const getButtonProps = useCallback((answer, index) => {
         const baseClasses = `w-full text-left font-bold py-3 px-5 rounded-lg shadow mb-3 md:w-auto md:mb-0 transition-all duration-150 ease-in-out`;
-        // Cycle through a predefined list of colors for options
         const colors = [
-            'bg-yellow-500 hover:bg-yellow-600 text-black', // A
-            'bg-blue-500 hover:bg-blue-600 text-white',    // B
-            'bg-pink-500 hover:bg-pink-600 text-white',    // C
-            'bg-green-500 hover:bg-green-600 text-white'   // D
+            'bg-yellow-500 hover:bg-yellow-600 text-black',
+            'bg-blue-500 hover:bg-blue-600 text-white',
+            'bg-pink-500 hover:bg-pink-600 text-white',
+            'bg-green-500 hover:bg-green-600 text-white'
         ];
         const colorClass = colors[index % colors.length];
 
         let style = `${baseClasses} ${colorClass}`;
         let isDisabled = false;
 
-        if (answerFeedback && isAnswerSelected) { // Feedback is showing
-            isDisabled = true; // Disable all buttons
-            if (answer.id === currentQuestion?.answer) { // Correct answer
-                style += ' ring-4 ring-offset-2 ring-green-400 scale-105'; // Highlight correct
-            } else if (answer.id === answerFeedback.selectedAnswerId) { // Incorrect selected answer
-                style += ' ring-4 ring-offset-2 ring-red-400 opacity-70'; // Highlight incorrect selection
-            } else { // Other incorrect, unselected answers
-                style += ' opacity-50'; // Dim other options
+        if (answerFeedback && isAnswerSelected) {
+            isDisabled = true;
+            if (answer.id === currentQuestion?.answer) {
+                style += ' ring-4 ring-offset-2 ring-green-400 scale-105';
+            } else if (answer.id === answerFeedback.selectedAnswerId) {
+                style += ' ring-4 ring-offset-2 ring-red-400 opacity-70';
+            } else {
+                style += ' opacity-50';
             }
-        } else if (isAnswerSelected && !answerFeedback) { // Answer selected, but feedback modal not yet active (should be a very brief state)
+        } else if (isAnswerSelected && !answerFeedback) {
             isDisabled = true;
             style += ' opacity-50 cursor-not-allowed';
         }
-        // Default state (no feedback, no answer selected yet): style is just baseClasses + colorClass, isDisabled is false
-
         return { className: style, disabled: isDisabled };
     }, [answerFeedback, isAnswerSelected, currentQuestion]);
 
-
-    // --- Conditional Rendering: Loading/Error/Finished States ---
-    if (quizStatus === 'loading') {
+    if (quizStatus === 'loading' || quizStatus === 'submitting') {
         return (
             <div className="bg-gray-300 min-h-screen flex items-center justify-center p-4 font-sans bg-bgimg">
                 <div className="bg-white p-8 rounded-lg shadow-xl text-center">
-                    <p className="text-xl font-semibold animate-pulse">Loading Quiz...</p>
+                    <p className="text-xl font-semibold animate-pulse">
+                        {quizStatus === 'submitting' ? 'Submitting Results...' : 'Loading Quiz...'}
+                    </p>
                 </div>
             </div>
         );
     }
 
-    if (isQuizOver) { // Handles 'finished' or 'error' status
+    if (isQuizOver && quizStatus !== 'submitting') {
         return (
             <QuizOverModal
-                isOpen={true} // Always open when this state is reached
-                timeLeft={timeLeft} // Pass timeLeft to show if time ran out
+                isOpen={true}
+                timeLeft={timeLeft}
                 finalScore={finalScore}
-                totalQuestions={quizQuestions.length > 0 ? quizQuestions.length : totalItems} // Fallback to totalItems if questions array is empty
-                error={quizError} // Pass error message if any
+                totalQuestions={quizQuestions.length > 0 ? quizQuestions.length : totalItems}
+                error={quizError}
                 onContinue={handleQuizEndContinue}
             />
         );
     }
-
-    // --- Main Quiz UI ---
     return (
         <div className="bg-gray-300 min-h-screen flex items-center justify-center p-4 font-sans bg-bgimg">
             <div className="bg-gray-100 p-4 rounded-lg shadow-xl w-full max-w-3xl md:p-6 lg:p-8 relative">
-
-                {/* --- Mobile Header Section --- */}
                 <div className="md:hidden flex justify-between items-center mb-4">
                     <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">Back</button>
                     <div className="text-center" aria-live="polite">
@@ -409,16 +438,15 @@ function DoingQuiz() {
                             <span className="block text-xl font-bold leading-tight">{score}</span>
                         </div>
                     </div>
-                    <div className="text-sm font-semibold text-gray-600 w-16 text-right tabular-nums"> {/* Added w-16 for consistent spacing */}
+                    <div className="text-sm font-semibold text-gray-600 w-16 text-right tabular-nums">
                         {currentQuestionIndex + 1}/{quizQuestions.length}
                     </div>
                 </div>
 
-                {/* --- Desktop Header Section --- */}
                 <header className="hidden md:flex justify-between items-center mb-8 relative">
                     <button onClick={handleBackClick} className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-4 py-1.5 rounded shadow">Back</button>
-                    <div className="text-center flex-grow mx-4"> {/* flex-grow to take available space */}
-                        <div className="text-sm font-semibold text-gray-600 mb-1 tabular-nums" aria-hidden="true"> {/* aria-hidden as visual cue mainly */}
+                    <div className="text-center flex-grow mx-4">
+                        <div className="text-sm font-semibold text-gray-600 mb-1 tabular-nums" aria-hidden="true">
                             Question {currentQuestionIndex + 1} of {quizQuestions.length}
                         </div>
                         <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 uppercase tracking-wider">Time</h1>
@@ -432,7 +460,6 @@ function DoingQuiz() {
                     </div>
                 </header>
 
-                {/* --- Question Display Section --- */}
                 <main className="text-center mb-6 md:mb-8">
                     <p className="text-gray-800 mb-4 text-lg lg:text-xl font-medium px-2 leading-relaxed">
                         <span className="sr-only">Question {currentQuestionIndex + 1} of {quizQuestions.length}:</span>
@@ -444,19 +471,16 @@ function DoingQuiz() {
                                 src={currentQuestion.imageUrl}
                                 alt={currentQuestion.text ? `Visual for: ${currentQuestion.text.substring(0, 50)}...` : `Quiz visual aid ${currentQuestion.id}`}
                                 className="h-32 md:h-40 w-auto mx-auto object-contain"
-                                onError={handleImageError} // Handle broken image links
+                                onError={handleImageError}
                             />
                         </div>
                     )}
                 </main>
 
-                {/* --- Mobile Timer Display Section --- */}
-                {/* Timer displayed below question on mobile for better visibility */}
                 <div className="flex justify-center items-center mb-8 md:hidden">
                     <TimerDisplay timeDigits={timeDigits} />
                 </div>
 
-                {/* --- Answer Options Section --- */}
                 <section className="w-full max-w-sm mx-auto px-4 md:px-0 md:max-w-none md:bg-gradient-to-b from-gray-800 to-black md:p-6 md:rounded-lg md:shadow-inner">
                     <h2 className="sr-only">Choose an answer:</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-2 md:gap-4">
@@ -464,11 +488,11 @@ function DoingQuiz() {
                             const buttonProps = getButtonProps(answer, index);
                             return (
                                 <button
-                                    key={answer.id} // Use the unique ID from processed answers
+                                    key={answer.id}
                                     onClick={() => handleAnswerClick(answer.id)}
                                     disabled={buttonProps.disabled}
                                     className={buttonProps.className}
-                                    aria-label={`Answer ${answer.displayKey}: ${answer.text}`} // Enhanced accessibility
+                                    aria-label={`Answer ${answer.displayKey}: ${answer.text}`}
                                 >
                                     <span className="font-bold mr-2">{answer.displayKey}.</span> {answer.text}
                                 </button>
@@ -478,14 +502,13 @@ function DoingQuiz() {
                 </section>
             </div>
 
-            {/* --- Modals Rendering --- */}
             <CancelModal
                 isOpen={showCancelModal}
                 onConfirm={handleCancelConfirm}
                 onCancel={handleCancelDismiss}
             />
             <FeedbackModal
-                isOpen={Boolean(answerFeedback)} // Open if answerFeedback is not null
+                isOpen={Boolean(answerFeedback)}
                 feedback={answerFeedback}
                 onContinue={handleContinueAfterFeedback}
                 isLastQuestion={currentQuestionIndex >= quizQuestions.length - 1}
@@ -494,5 +517,4 @@ function DoingQuiz() {
     );
 }
 
-// Export Component
 export default DoingQuiz;

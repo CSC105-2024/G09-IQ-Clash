@@ -1,21 +1,11 @@
-import { Axios } from "../utils/axiosInstance";
+import { Axios } from '../utils/axiosInstance';
 
-//do the integration part of quiz here 
-//and then export to use in DoingQuiz and Summary part.
-
-
-//you can change it whatever you want
-export const quiz = async() => {
+export const getQuizQuestions = async (topic) => {
     try {
-
+        const response = await Axios.get(`/quiz/${encodeURIComponent(topic)}`);
+        return response.data;
     } catch (error) {
-
+        console.error(`Error fetching quiz questions for topic "${topic}" in apiquiz:`, error);
+        throw error;
     }
-}
-export const summary = async() => {
-    try {
-
-    } catch (error) {
-
-    }
-}
+};

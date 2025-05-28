@@ -8,7 +8,7 @@ import {
   getUserById,
   logoutUser,
   decodeCookie
-  
+
  
 } from '../controllers/user.controller.js'; 
 import { authMiddleware } from '../middlwares/auth.middleware.js';

@@ -163,7 +163,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\Backend\\src\\generated\\prisma",
+      "value": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\G09-IQ-Clash-main\\backend\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -177,7 +177,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\Backend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\User\\Downloads\\G09-IQ-Clash-main\\G09-IQ-Clash-main\\backend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -191,11 +191,12 @@ const config = {
     "db"
   ],
   "activeProvider": "sqlite",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "file:./dev.db"
+        "value": null
       }
     }
   },

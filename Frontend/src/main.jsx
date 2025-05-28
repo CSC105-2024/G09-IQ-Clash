@@ -1,45 +1,57 @@
-import React, { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import './index.css';
-import Homepage from './page/Homepage';
-import LoginPageWithAlert from './page/Login';
-import { Post } from './page/Post';
-import { Useredit } from './page/Useredit';
-
-
+import Homepage from './pages/Homepage.jsx';
+import UserPage from './pages/UserPage.jsx';
+import DoingQuiz from './pages/DoingQuiz.jsx';
+import Register from './pages/Register.jsx';
+import Login from './pages/Login.jsx';
+import ChoosingQuiz from './pages/ChoosingQuiz.jsx';
+import ChoosingQuiz2 from './pages/ChoosingQuiz2.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
+import Summary from './pages/Summary.jsx';
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <Homepage />,
+    path: "/", 
+    element: <Homepage/>, 
   },
+  {
+    path: "/register",
+    element: <Register/>,
+  },  
   {
     path: "/login",
-    element: <LoginPageWithAlert />,
+    element: <Login/>,
   },
   {
-    path: "/signup",
-    element: <LoginPageWithAlert />,
+    path: "/play",
+    element: <ChoosingQuiz/>,
   },
   {
-    path: "/blog",
-    element: <Post />,
+    path: "/play/:topic",
+    element: <ChoosingQuiz2/>,
   },
-    {
-    path: "/useredit",
-    element: <Useredit />
+  {
+    path: "/play/:topic/:time/:items",
+    element: <DoingQuiz/>
   },
+  {
+    path: "/leaderboard",
+    element: <Leaderboard/>
+  },  
+  {
+    path: "/play/:topic/:time/:items/summary",
+    element: <Summary/>
+  },
+  {
+    path: "/userpage",
+    element:<UserPage/>
+  }
 ]);
-
-
-const rootElement = document.getElementById("root");
-
-if (rootElement) {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <RouterProvider router={router} />
-    </StrictMode>
-  );
-} else {
-  console.error("Failed to find the root element. Ensure your HTML has an element with id='root'.");
-}
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>
+);

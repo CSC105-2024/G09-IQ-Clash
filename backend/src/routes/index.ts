@@ -1,9 +1,14 @@
-import { Hono } from "hono";
-import userRoute from "./user.route.js";
-import postRoute from "./post.route.js";
+import { Hono } from 'hono'
+import userRoutes from './user.js'
+import quizRoutes from './quiz.js'
+import leaderboardRoutes from './leaderboard.js'
+import summaryRoutes from './summary.js'
 
-const mainRouter = new Hono()
+const router = new Hono()
 
-mainRouter.route('/user',userRoute) // to login/logout update profile/ password/username
-mainRouter.route('/post',postRoute)
-export default mainRouter
+router.route('/user', userRoutes)
+router.route('/quiz', quizRoutes)
+router.route('/leaderboard', leaderboardRoutes)
+router.route('/summary', summaryRoutes)
+
+export default router

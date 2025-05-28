@@ -10,44 +10,91 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
-  id         Int          @id @default(autoincrement())
-  username   String       @unique
-  password   String
-  totalScore Int          @default(0)
-  quizzes    QuizResult[]
+  id        Int        @id @default(autoincrement())
+  username  String     @unique
+  password  String  
+  email     String @unique  
+  profile   String? //store user profile picture in url
+  posts     Post[]
+  likes     Like[]
+  comments  Comment[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
-model Quiz {
-  id        Int          @id @default(autoincrement())
-  category  String
-  questions Question[]
-  results   QuizResult[]
+model Post {
+  id          Int        @id @default(autoincrement())
+  content     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  authorId    Int
+  author      User       @relation(fields: [authorId], references: [id])
+  authorName  String
+  authorImage String?
+
+  images      Image[]
+  files       File[]
+  links       Link[]
+  tags        Tag[]
+  likes       Like[]
+  comments    Comment[]
+
+  @@index([authorId])
 }
 
-model Question {
-  id       Int     @id @default(autoincrement())
-  quizId   Int
-  text     String
-  imageUrl String? // optional
-  options  Json
-  answer   String
+model Like {
+  id      Int     @id @default(autoincrement())
+  userId  Int
+  postId  Int
 
-  quiz Quiz @relation(fields: [quizId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  post    Post    @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
 }
 
-model QuizResult {
-  id         Int @id @default(autoincrement())
-  userId     Int
-  quizId     Int
-  score      Int
-  wrong      Int
-  unanswered Int
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  quiz Quiz @relation(fields: [quizId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Image {
+  id      Int    @id @default(autoincrement())
+  url     String
+  postId  Int
+  post    Post   @relation(fields: [postId], references: [id])
+}
+
+model File {
+  id      Int    @id @default(autoincrement())
+  name    String
+  url     String
+  postId  Int
+  post    Post   @relation(fields: [postId], references: [id])
+}
+
+model Link {
+  id      Int    @id @default(autoincrement())
+  url     String
+  postId  Int
+  post    Post   @relation(fields: [postId], references: [id])
+}
+
+model Tag {
+  id      Int    @id @default(autoincrement())
+  name    String @unique
+  posts   Post[]
 }

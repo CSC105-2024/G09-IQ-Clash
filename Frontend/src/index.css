@@ -1,9 +1,2 @@
 @import 'tailwindcss';
 
-@tailwind utilities;
-
-.bg-bgimg{
-    background-image: url('../public/background.png');
-    background-blend-mode:luminosity;
-    background-color: white;
-}
